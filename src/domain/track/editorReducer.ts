@@ -1,4 +1,4 @@
-import type { Checkpoint, ControlPoint, StartLine, TrackDocument } from './schema'
+import type { Checkpoint, ControlPoint, StartLine, TrackDocument, TrackMetadata } from './schema'
 import { createTrackDocument } from './schema'
 
 export type EditorAction =
@@ -12,6 +12,7 @@ export type EditorAction =
   | { type: 'SET_START_LINE_HEADING'; headingDeg: number }
   | { type: 'ADD_CHECKPOINT'; controlPointIndex: number }
   | { type: 'REMOVE_CHECKPOINT'; controlPointIndex: number }
+  | { type: 'SET_METADATA'; metadata: Partial<TrackMetadata> }
 
 export function editorReducer(doc: TrackDocument, action: EditorAction): TrackDocument {
   switch (action.type) {
@@ -94,6 +95,9 @@ export function editorReducer(doc: TrackDocument, action: EditorAction): TrackDo
           (c) => c.controlPointIndex !== action.controlPointIndex,
         ),
       }
+
+    case 'SET_METADATA':
+      return { ...doc, metadata: { ...doc.metadata, ...action.metadata } }
 
     default:
       return doc

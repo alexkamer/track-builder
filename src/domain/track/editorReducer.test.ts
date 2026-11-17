@@ -120,4 +120,22 @@ describe('editorReducer', () => {
     const next = editorReducer(doc, { type: 'REMOVE_CHECKPOINT', controlPointIndex: 1 })
     expect(next.checkpoints).toEqual([])
   })
+
+  it('sets metadata fields, merging with existing metadata', () => {
+    const doc = createTrackDocument({ metadata: { author: 'Alex' } })
+    const next = editorReducer(doc, {
+      type: 'SET_METADATA',
+      metadata: { description: 'A twisty circuit' },
+    })
+    expect(next.metadata).toEqual({ author: 'Alex', description: 'A twisty circuit' })
+  })
+
+  it('overwrites an existing metadata field without affecting others', () => {
+    const doc = createTrackDocument({ metadata: { author: 'Alex', description: 'Old description' } })
+    const next = editorReducer(doc, {
+      type: 'SET_METADATA',
+      metadata: { description: 'New description' },
+    })
+    expect(next.metadata).toEqual({ author: 'Alex', description: 'New description' })
+  })
 })

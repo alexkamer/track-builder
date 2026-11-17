@@ -46,3 +46,28 @@ describe('App delete control point', () => {
     expect(screen.getByText('Select a control point to edit its width, elevation, and banking.')).toBeInTheDocument()
   })
 })
+
+describe('App track metadata editing', () => {
+  it('reverts an author edit via undo after the field is committed on blur', () => {
+    render(<App />)
+    const authorInput = screen.getByTestId('metadata-author-input')
+
+    fireEvent.change(authorInput, { target: { value: 'Alex' } })
+    fireEvent.blur(authorInput)
+    expect(screen.getByTestId('metadata-author-input')).toHaveValue('Alex')
+
+    fireEvent.click(screen.getByTestId('undo-button'))
+
+    expect(screen.getByTestId('metadata-author-input')).toHaveValue('')
+  })
+
+  it('reflects a loaded preset track\'s existing metadata', () => {
+    render(<App />)
+
+    fireEvent.change(screen.getByTestId('preset-select'), { target: { value: 'preset-oval-speedway' } })
+
+    expect(screen.getByTestId('metadata-description-input')).toHaveValue(
+      'A fast, wide oval - good for learning the controls.',
+    )
+  })
+})

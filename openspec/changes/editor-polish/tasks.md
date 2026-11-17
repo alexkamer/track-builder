@@ -20,9 +20,9 @@
 
 ## 4. Track metadata (author/description) editing UI
 
-- [ ] 4.1 Add a `SET_METADATA` action to `EditorAction`/`editorReducer.ts` that merges a partial `TrackMetadata` into `doc.metadata`; verify with a reducer unit test covering partial updates and undo/redo participation
-- [ ] 4.2 Add author/description text inputs in `App.tsx` (or a small metadata panel component), bound to `doc.metadata.author`/`description`, dispatching `SET_METADATA` with `{ transient: true }` on change and `commit()` on blur; verify with a component test that typing updates the field and undo after blur reverts it
-- [ ] 4.3 Verify the inputs reflect the loaded track's existing metadata (including empty/unset values rendering as empty strings) when switching between presets/saved tracks; add a test for this load-reflects-metadata scenario
+- [x] 4.1 Add a `SET_METADATA` action to `EditorAction`/`editorReducer.ts` that merges a partial `TrackMetadata` into `doc.metadata`; verify with a reducer unit test covering partial updates and undo/redo participation
+- [x] 4.2 Add author/description text inputs in `App.tsx` (or a small metadata panel component), bound to `doc.metadata.author`/`description`, dispatching `SET_METADATA` with `{ transient: true }` on change and `commit()` on blur; verify with a component test that typing updates the field and undo after blur reverts it
+- [x] 4.3 Verify the inputs reflect the loaded track's existing metadata (including empty/unset values rendering as empty strings) when switching between presets/saved tracks; add a test for this load-reflects-metadata scenario
 
 ## Workflow follow-up
 

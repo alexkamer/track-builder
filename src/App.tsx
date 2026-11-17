@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { TrackEditor2D, type PointClickMode } from './components/TrackEditor2D'
 import { LiveTrackPreview3D } from './components/LiveTrackPreview3D'
 import { ControlPointInspector } from './components/ControlPointInspector'
+import { TrackMetadataPanel } from './components/TrackMetadataPanel'
 import { RaceScene } from './components/RaceScene'
 import { useTrackEditorHistory } from './hooks/useTrackEditorHistory'
 import { useEditorKeyboardShortcuts } from './hooks/useEditorKeyboardShortcuts'
@@ -183,6 +184,7 @@ function App() {
         {shareUrl && <input type="text" data-testid="share-url-output" readOnly value={shareUrl} />}
         {shareError && <span className="validation-errors">{shareError}</span>}
       </div>
+      <TrackMetadataPanel doc={doc} dispatch={dispatch} onCommit={commit} />
       <div className="editor-panels">
         <TrackEditor2D
           doc={doc}
