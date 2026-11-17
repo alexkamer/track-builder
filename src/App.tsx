@@ -13,7 +13,7 @@ import './App.css'
 type Mode = 'edit' | 'race'
 
 function App() {
-  const { doc, dispatch, commit, undo, redo, loadTrack, canUndo, canRedo } = useTrackEditorHistory()
+  const { doc, dispatch, commit, undo, redo, loadTrack, canUndo, canRedo, loadKey } = useTrackEditorHistory()
   const [mode, setMode] = useState<Mode>('edit')
   const [toolMode, setToolMode] = useState<PointClickMode>('select')
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
@@ -183,6 +183,7 @@ function App() {
           selectedIndex={selectedIndex}
           onSelectPoint={setSelectedIndex}
           snapToGridEnabled={snapToGridEnabled}
+          loadKey={loadKey}
         />
         <LiveTrackPreview3D doc={doc} />
         <ControlPointInspector doc={doc} selectedIndex={selectedIndex} dispatch={dispatch} />

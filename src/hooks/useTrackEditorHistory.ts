@@ -32,5 +32,7 @@ export function useTrackEditorHistory() {
     loadTrack,
     canUndo: state.past.length > 0,
     canRedo: state.future.length > 0,
+    /** Changes only when a track is loaded wholesale (not on in-place edits); see TrackEditor2D's `loadKey` prop. */
+    loadKey: `${state.present.id}:${state.present.createdAt}`,
   }
 }

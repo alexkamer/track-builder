@@ -11,7 +11,7 @@ interface LiveTrackPreview3DProps {
   height?: number
 }
 
-function centroidOf(roadMesh: RibbonMesh) {
+export function centroidOf(roadMesh: RibbonMesh) {
   const n = roadMesh.positions.length
   const sum = roadMesh.positions.reduce(
     (acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y, z: acc.z + p.z }),
@@ -20,7 +20,7 @@ function centroidOf(roadMesh: RibbonMesh) {
   return { x: sum.x / n, y: sum.y / n, z: sum.z / n }
 }
 
-function boundingRadiusOf(roadMesh: RibbonMesh, center: { x: number; z: number }) {
+export function boundingRadiusOf(roadMesh: RibbonMesh, center: { x: number; z: number }) {
   return roadMesh.positions.reduce(
     (max, p) => Math.max(max, Math.hypot(p.x - center.x, p.z - center.z)),
     1,

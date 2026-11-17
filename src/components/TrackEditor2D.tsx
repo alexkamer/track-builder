@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { TrackDocument } from '../domain/track/schema'
 import { createControlPoint } from '../domain/track/schema'
 import type { EditorAction } from '../domain/track/editorReducer'
@@ -20,17 +20,57 @@ interface TrackEditor2DProps {
   onSelectPoint?: (index: number) => void
   snapToGridEnabled?: boolean
   gridSize?: number
+  /**
+   * Changes only when a track is loaded wholesale (not on in-place edits like add/move/delete),
+   * e.g. `${doc.id}:${doc.createdAt}`. Triggers the view to re-fit to the loaded track's bounds.
+   */
+  loadKey?: string
 }
 
 const SAMPLES_PER_SEGMENT = 12
 const POINT_RADIUS = 7
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 4
+const FIT_PADDING = 40
 
 interface ViewTransform {
   zoom: number
   panX: number
   panY: number
+}
+
+const DEFAULT_VIEW: ViewTransform = { zoom: 1, panX: 0, panY: 0 }
+
+/** Computes a zoom/pan that fits all control points within `width`x`height`, centered, with padding. */
+function computeFitView(
+  points: { x: number; z: number }[],
+  width: number,
+  height: number,
+): ViewTransform {
+  if (points.length === 0) return DEFAULT_VIEW
+
+  const minX = Math.min(...points.map((p) => p.x))
+  const maxX = Math.max(...points.map((p) => p.x))
+  const minZ = Math.min(...points.map((p) => p.z))
+  const maxZ = Math.max(...points.map((p) => p.z))
+  const boxWidth = maxX - minX
+  const boxHeight = maxZ - minZ
+
+  if (boxWidth <= 0 || boxHeight <= 0) return DEFAULT_VIEW
+
+  const availableWidth = Math.max(width - 2 * FIT_PADDING, 1)
+  const availableHeight = Math.max(height - 2 * FIT_PADDING, 1)
+  const zoom = Math.min(
+    MAX_ZOOM,
+    Math.max(MIN_ZOOM, Math.min(availableWidth / boxWidth, availableHeight / boxHeight)),
+  )
+
+  const centerX = (minX + maxX) / 2
+  const centerZ = (minZ + maxZ) / 2
+  const panX = width / 2 - centerX * zoom
+  const panY = height / 2 - centerZ * zoom
+
+  return { zoom, panX, panY }
 }
 
 export function TrackEditor2D({
@@ -44,11 +84,18 @@ export function TrackEditor2D({
   onSelectPoint,
   snapToGridEnabled = false,
   gridSize = DEFAULT_GRID_SIZE,
+  loadKey,
 }: TrackEditor2DProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
-  const [view, setView] = useState<ViewTransform>({ zoom: 1, panX: 0, panY: 0 })
+  const [view, setView] = useState<ViewTransform>(DEFAULT_VIEW)
   const panStartRef = useRef<{ clientX: number; clientY: number; panX: number; panY: number } | null>(null)
+
+  useEffect(() => {
+    setView(computeFitView(doc.controlPoints, width, height))
+    // Re-fit only when a track is loaded wholesale, not on every doc edit (see loadKey prop doc).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadKey])
 
   const toLocalPoint = useCallback(
     (clientX: number, clientY: number) => {
