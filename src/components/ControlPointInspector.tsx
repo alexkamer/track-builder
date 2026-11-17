@@ -5,9 +5,17 @@ interface ControlPointInspectorProps {
   doc: TrackDocument
   selectedIndex: number | null
   dispatch: (action: EditorAction) => void
+  onDeletePoint?: (index: number) => void
 }
 
-export function ControlPointInspector({ doc, selectedIndex, dispatch }: ControlPointInspectorProps) {
+const MIN_CONTROL_POINTS = 3
+
+export function ControlPointInspector({
+  doc,
+  selectedIndex,
+  dispatch,
+  onDeletePoint,
+}: ControlPointInspectorProps) {
   if (selectedIndex === null || !doc.controlPoints[selectedIndex]) {
     return (
       <div className="inspector" data-testid="control-point-inspector">
@@ -17,6 +25,7 @@ export function ControlPointInspector({ doc, selectedIndex, dispatch }: ControlP
   }
 
   const point = doc.controlPoints[selectedIndex]
+  const canDelete = doc.controlPoints.length > MIN_CONTROL_POINTS
 
   return (
     <div className="inspector" data-testid="control-point-inspector">
@@ -68,6 +77,14 @@ export function ControlPointInspector({ doc, selectedIndex, dispatch }: ControlP
           }
         />
       </label>
+      <button
+        type="button"
+        data-testid="delete-point-button"
+        disabled={!canDelete}
+        onClick={() => onDeletePoint?.(selectedIndex)}
+      >
+        Delete point
+      </button>
     </div>
   )
 }

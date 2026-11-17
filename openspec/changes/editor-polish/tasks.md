@@ -2,15 +2,15 @@
 
 ## 1. Auto-fit 2D canvas and 3D preview on track load
 
-- [ ] 1.1 Expose a load-identity signal from `useTrackEditorHistory` (reuse `doc.id` + `doc.createdAt`, or add a `loadVersion` counter if those don't change on every load path) and pass it through `App.tsx` to `TrackEditor2D`
-- [ ] 1.2 In `TrackEditor2D`, compute a bounding-box fit (`zoom`/`panX`/`panY` clamped to `[MIN_ZOOM, MAX_ZOOM]`, centered, with padding; fall back to the current default view for degenerate/near-empty bounds) and apply it in a `useEffect` keyed on the load-identity signal, not on every `doc` change; verify via a test that loading a preset with far-off-origin control points results in a view transform containing all points, and that dragging/adding a point afterward does not reset the view
-- [ ] 1.3 Add a test asserting `LiveTrackPreview3D`'s existing `CameraFraming` repositions the camera to frame the full track when `doc` changes via a load (not just an in-place edit), covering the proposal's explicit "on load" scenario
+- [x] 1.1 Expose a load-identity signal from `useTrackEditorHistory` (reuse `doc.id` + `doc.createdAt`, or add a `loadVersion` counter if those don't change on every load path) and pass it through `App.tsx` to `TrackEditor2D`
+- [x] 1.2 In `TrackEditor2D`, compute a bounding-box fit (`zoom`/`panX`/`panY` clamped to `[MIN_ZOOM, MAX_ZOOM]`, centered, with padding; fall back to the current default view for degenerate/near-empty bounds) and apply it in a `useEffect` keyed on the load-identity signal, not on every `doc` change; verify via a test that loading a preset with far-off-origin control points results in a view transform containing all points, and that dragging/adding a point afterward does not reset the view
+- [x] 1.3 Add a test asserting `LiveTrackPreview3D`'s existing `CameraFraming` repositions the camera to frame the full track when `doc` changes via a load (not just an in-place edit), covering the proposal's explicit "on load" scenario
 - [ ] 1.4 Manually verify in the running app: load each of the preset tracks with large coordinate ranges and confirm the 2D canvas and 3D preview both show the full track without manual zoom/pan
 
 ## 2. Delete-control-point UI
 
-- [ ] 2.1 Add a "Delete point" button to `ControlPointInspector`, disabled when no point is selected or when `doc.controlPoints.length <= 3`, dispatching `{ type: 'DELETE_POINT', index: selectedIndex }` and clearing selection on click; verify with a component test that clicking it removes the point and a test that the button is disabled at the 3-point floor
-- [ ] 2.2 Ensure selection clears or re-targets sensibly after delete (no stale `selectedIndex` pointing past the new array length); verify with a test that selecting the last point and deleting it leaves no point selected
+- [x] 2.1 Add a "Delete point" button to `ControlPointInspector`, disabled when no point is selected or when `doc.controlPoints.length <= 3`, dispatching `{ type: 'DELETE_POINT', index: selectedIndex }` and clearing selection on click; verify with a component test that clicking it removes the point and a test that the button is disabled at the 3-point floor
+- [x] 2.2 Ensure selection clears or re-targets sensibly after delete (no stale `selectedIndex` pointing past the new array length); verify with a test that selecting the last point and deleting it leaves no point selected
 
 ## 3. Keyboard shortcuts for undo/redo/delete
 

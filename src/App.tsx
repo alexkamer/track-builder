@@ -41,6 +41,12 @@ function App() {
   const errors = validateTrack(doc)
   const canRace = errors.length === 0
 
+  const deleteSelectedPoint = () => {
+    if (selectedIndex === null || doc.controlPoints.length <= 3) return
+    dispatch({ type: 'DELETE_POINT', index: selectedIndex })
+    setSelectedIndex(null)
+  }
+
   if (mode === 'race') {
     return (
       <div className="app-shell race-shell">
@@ -186,7 +192,12 @@ function App() {
           loadKey={loadKey}
         />
         <LiveTrackPreview3D doc={doc} />
-        <ControlPointInspector doc={doc} selectedIndex={selectedIndex} dispatch={dispatch} />
+        <ControlPointInspector
+          doc={doc}
+          selectedIndex={selectedIndex}
+          dispatch={dispatch}
+          onDeletePoint={deleteSelectedPoint}
+        />
       </div>
       {errors.length > 0 && (
         <ul className="validation-errors" data-testid="validation-errors">
