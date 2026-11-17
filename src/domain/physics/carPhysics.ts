@@ -20,6 +20,30 @@ export interface CarState {
 
 export const NEUTRAL_INPUT: CarInput = { throttle: 0, brake: 0, steer: 0 }
 
+function lerpAngle(a: number, b: number, t: number): number {
+  const twoPi = Math.PI * 2
+  let diff = ((b - a) % twoPi + twoPi) % twoPi
+  if (diff > Math.PI) diff -= twoPi
+  return a + diff * t
+}
+
+/**
+ * Blends between the tick state from before this render frame and the tick state after it,
+ * for rendering only - physics itself always advances in exact fixed steps. Used so the car's
+ * on-screen position glides between ticks instead of holding still until the next tick lands,
+ * which otherwise reads as a stutter whenever render frame rate doesn't exactly match the
+ * fixed tick rate (see FixedTimestepAccumulator.alpha).
+ */
+export function interpolateCarState(prev: CarState, next: CarState, alpha: number): CarState {
+  return {
+    x: prev.x + (next.x - prev.x) * alpha,
+    z: prev.z + (next.z - prev.z) * alpha,
+    headingRad: lerpAngle(prev.headingRad, next.headingRad, alpha),
+    speed: next.speed,
+    lateralSlip: next.lateralSlip,
+  }
+}
+
 export interface CarPhysicsParams {
   acceleration: number
   brakeDeceleration: number

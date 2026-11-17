@@ -21,6 +21,17 @@ export class FixedTimestepAccumulator {
     }
     return ticks
   }
+
+  /**
+   * How far (0..1) past the last completed tick the accumulator currently sits. Lets a
+   * renderer interpolate between the previous and current tick's state for this frame
+   * instead of holding position at the last tick until the next one lands, which is what
+   * produces visible micro-stutter when the render frame rate doesn't line up exactly with
+   * the fixed tick rate.
+   */
+  get alpha(): number {
+    return this.accumulated / this.fixedDt
+  }
 }
 
 export function runFixedTimestepSimulation<State, Input>(

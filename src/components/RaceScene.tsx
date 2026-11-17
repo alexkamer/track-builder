@@ -113,7 +113,6 @@ export function RaceScene({ doc, trackId = null }: RaceSceneProps) {
         <RibbonMesh3D mesh={generated.barrierRight} color="#495057" roughness={0.6} testId="barrier-right" />
         <CarRig
           carStateRef={carStateRef}
-          spawnY={generated.spawn.position.y}
           inputRef={inputRef}
           track={generated}
           controllable={controllable}
@@ -122,9 +121,9 @@ export function RaceScene({ doc, trackId = null }: RaceSceneProps) {
         />
         <GhostRig spawn={generated.spawn} inputLog={ghostInputLog} track={generated} />
         {cameraMode === 'chase' ? (
-          <ChaseCamera carStateRef={carStateRef} />
+          <ChaseCamera carStateRef={carStateRef} track={generated} />
         ) : (
-          <TopDownCamera carStateRef={carStateRef} />
+          <TopDownCamera carStateRef={carStateRef} track={generated} />
         )}
         <CountdownDriver active={countdown.phase !== null} onTick={(delta) => setCountdown((c) => tickCountdown(c, delta))} />
       </Canvas>

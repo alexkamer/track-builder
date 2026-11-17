@@ -21,10 +21,11 @@ const TREE_COUNT = 60
 const TREE_MIN_CLEARANCE = 25
 const TREE_SCATTER_RADIUS_FACTOR = 1.8
 const GROUND_SIZE_FACTOR = 4
+const GROUND_CLEARANCE = 0.05
 
 /** Deterministic ground, sky, and tree scenery sized and placed around the generated track. */
 export function TrackScenery({ centerline }: TrackSceneryProps) {
-  const { groundSize, center, trees } = useMemo(() => {
+  const { groundSize, groundY, center, trees } = useMemo(() => {
     const center = centerline.reduce(
       (acc, p) => ({ x: acc.x + p.x / centerline.length, z: acc.z + p.z / centerline.length }),
       { x: 0, z: 0 },
@@ -34,6 +35,8 @@ export function TrackScenery({ centerline }: TrackSceneryProps) {
       1,
     )
     const groundSize = radius * GROUND_SIZE_FACTOR
+    const lowestY = centerline.reduce((min, p) => Math.min(min, p.y), 0)
+    const groundY = lowestY - GROUND_CLEARANCE
 
     const random = mulberry32(Math.round(center.x * 73856093 + center.z * 19349663) || 1)
     const trees: Vec3[] = []
@@ -53,18 +56,18 @@ export function TrackScenery({ centerline }: TrackSceneryProps) {
       }
     }
 
-    return { groundSize, center, trees }
+    return { groundSize, groundY, center, trees }
   }, [centerline])
 
   return (
     <>
       <color attach="background" args={['#87ceeb']} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[center.x, -0.05, center.z]} data-testid="ground-plane">
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[center.x, groundY, center.z]} data-testid="ground-plane">
         <planeGeometry args={[groundSize, groundSize]} />
         <meshStandardMaterial color="#4a7c3a" />
       </mesh>
       {trees.map((t, i) => (
-        <group key={i} position={[t.x, 0, t.z]} data-testid={i === 0 ? 'tree-sample' : undefined}>
+        <group key={i} position={[t.x, groundY, t.z]} data-testid={i === 0 ? 'tree-sample' : undefined}>
           <mesh position={[0, 1, 0]}>
             <cylinderGeometry args={[0.3, 0.4, 2, 6]} />
             <meshStandardMaterial color="#6b4423" />

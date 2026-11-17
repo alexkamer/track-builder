@@ -3,9 +3,11 @@ import {
   achievableTurnRadius,
   createInitialCarState,
   DEFAULT_CAR_PARAMS,
+  interpolateCarState,
   NEUTRAL_INPUT,
   stepCarPhysics,
   type CarInput,
+  type CarState,
 } from './carPhysics'
 import { runFixedTimestepSimulation } from './fixedTimestepLoop'
 
@@ -153,5 +155,30 @@ describe('stepCarPhysics off-track penalty', () => {
     const withDefault = stepCarPhysics(driveUpToSpeed(90), NEUTRAL_INPUT, FIXED_DT)
     const explicitOnTrack = stepCarPhysics(driveUpToSpeed(90), NEUTRAL_INPUT, FIXED_DT, undefined, false)
     expect(withDefault).toEqual(explicitOnTrack)
+  })
+})
+
+describe('interpolateCarState', () => {
+  const prev: CarState = { x: 0, z: 0, headingRad: 0, speed: 10, lateralSlip: 0 }
+  const next: CarState = { x: 10, z: 20, headingRad: Math.PI / 2, speed: 12, lateralSlip: 1 }
+
+  it('returns prev at alpha 0 and next at alpha 1', () => {
+    expect(interpolateCarState(prev, next, 0)).toEqual({ ...prev, speed: next.speed, lateralSlip: next.lateralSlip })
+    expect(interpolateCarState(prev, next, 1)).toEqual(next)
+  })
+
+  it('linearly blends position at a midpoint alpha', () => {
+    const mid = interpolateCarState(prev, next, 0.5)
+    expect(mid.x).toBeCloseTo(5, 10)
+    expect(mid.z).toBeCloseTo(10, 10)
+    expect(mid.headingRad).toBeCloseTo(Math.PI / 4, 10)
+  })
+
+  it('takes the shorter way around when heading wraps past +-pi', () => {
+    const wrapPrev: CarState = { ...prev, headingRad: Math.PI - 0.1 }
+    const wrapNext: CarState = { ...next, headingRad: -Math.PI + 0.1 }
+    const mid = interpolateCarState(wrapPrev, wrapNext, 0.5)
+    // Going the short way (through +-pi), the midpoint heading is exactly +-pi.
+    expect(Math.abs(mid.headingRad)).toBeCloseTo(Math.PI, 5)
   })
 })
