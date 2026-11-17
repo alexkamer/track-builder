@@ -1,10 +1,10 @@
 import { useFrame } from '@react-three/fiber'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import type { Mesh } from 'three'
 import type { RefObject } from 'react'
 import type { CarInput, CarState } from '../domain/physics/carPhysics'
 import { FixedTimestepAccumulator } from '../domain/physics/fixedTimestepLoop'
-import { advanceCarTick } from '../domain/physics/advanceCarTick'
+import { advanceCarRigFrame } from '../domain/physics/carRigStep'
 import { mergeCarInputs, readGamepadInput } from '../domain/physics/gamepadInput'
 import type { GeneratedTrack } from '../domain/generation/generateTrack'
 
@@ -18,23 +18,48 @@ interface CarRigProps {
   spawnY: number
   inputRef: RefObject<CarInput>
   track: GeneratedTrack
+  /** While false, physics ticks are withheld entirely (e.g. during the pre-race countdown). */
+  controllable?: boolean
+  /** Bump to re-initialize the fixed-timestep accumulator and tick counter (e.g. on a mid-race restart). */
+  resetToken?: number
   /** Called once per fixed physics tick with the resulting state and the input used - used by lap timing, ghosts, etc. */
   onTick?: (state: CarState, tickIndex: number, input: CarInput) => void
 }
 
-export function CarRig({ carStateRef, spawnY, inputRef, track, onTick }: CarRigProps) {
+export function CarRig({
+  carStateRef,
+  spawnY,
+  inputRef,
+  track,
+  controllable = true,
+  resetToken,
+  onTick,
+}: CarRigProps) {
   const meshRef = useRef<Mesh>(null)
   const accumulatorRef = useRef(new FixedTimestepAccumulator(FIXED_DT))
   const tickCounterRef = useRef(0)
 
+  useEffect(() => {
+    accumulatorRef.current = new FixedTimestepAccumulator(FIXED_DT)
+    tickCounterRef.current = 0
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetToken])
+
   useFrame((_, delta) => {
-    const ticks = accumulatorRef.current.consume(Math.min(delta, MAX_FRAME_DELTA))
-    for (let i = 0; i < ticks; i++) {
-      const combinedInput = mergeCarInputs(inputRef.current, readGamepadInput())
-      carStateRef.current = advanceCarTick(carStateRef.current, combinedInput, FIXED_DT, track)
-      tickCounterRef.current += 1
-      onTick?.(carStateRef.current, tickCounterRef.current, combinedInput)
-    }
+    const result = advanceCarRigFrame({
+      accumulator: accumulatorRef.current,
+      tickCounter: tickCounterRef.current,
+      carState: carStateRef.current,
+      delta,
+      maxFrameDelta: MAX_FRAME_DELTA,
+      fixedDt: FIXED_DT,
+      controllable,
+      track,
+      getInput: () => mergeCarInputs(inputRef.current, readGamepadInput()),
+      onTick,
+    })
+    carStateRef.current = result.carState
+    tickCounterRef.current = result.tickCounter
     if (meshRef.current) {
       meshRef.current.position.set(carStateRef.current.x, spawnY + 0.6, carStateRef.current.z)
       meshRef.current.rotation.y = carStateRef.current.headingRad

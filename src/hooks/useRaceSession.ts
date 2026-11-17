@@ -13,6 +13,8 @@ interface UseRaceSessionResult {
   bestLapSeconds: number | null
   ghostInputLog: CarInput[]
   handleTick: (state: CarState, tickIndex: number, input: CarInput) => void
+  /** Resets the live/in-progress attempt (checkpoint progress, live lap timer) to a fresh spawn. Does not touch the tracked best lap or ghost. */
+  resetAttempt: () => void
 }
 
 /** Tracks checkpoint-gated lap progress, best-lap time, and records the input log for ghost replay. */
@@ -66,11 +68,19 @@ export function useRaceSession(doc: TrackDocument, generated: GeneratedTrack): U
     }
   }
 
+  const resetAttempt = () => {
+    prevPosRef.current = { x: generated.spawn.position.x, z: generated.spawn.position.z }
+    lapProgressRef.current = createLapProgressState()
+    currentLapInputLogRef.current = []
+    setLiveTickDisplay(0)
+  }
+
   return {
     liveLapSeconds: ticksToSeconds(liveTickDisplay, FIXED_DT),
     lastLapSeconds,
     bestLapSeconds,
     ghostInputLog,
     handleTick,
+    resetAttempt,
   }
 }

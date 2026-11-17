@@ -82,6 +82,27 @@
   z-index: 10;
 }
 
+.restart-button {
+  position: absolute;
+  top: 88px;
+  right: 16px;
+  z-index: 10;
+}
+
+.countdown-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  font-family: ui-monospace, monospace;
+  font-size: 96px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
 .leaderboard-panel {
   position: absolute;
   top: 100px;
