@@ -90,125 +90,137 @@ function App() {
     <div className="app-shell">
       <h1>Trackforge Editor</h1>
       <div className="toolbar">
-        <select
-          data-testid="preset-select"
-          defaultValue=""
-          onChange={(e) => {
-            const preset = PRESET_TRACKS.find((t) => t.id === e.target.value)
-            if (preset) loadTrack(preset)
-          }}
-        >
-          <option value="" disabled>
-            Load preset…
-          </option>
-          {PRESET_TRACKS.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
+        <div className="toolbar-group toolbar-group--files">
+          <select
+            data-testid="preset-select"
+            defaultValue=""
+            onChange={(e) => {
+              const preset = PRESET_TRACKS.find((t) => t.id === e.target.value)
+              if (preset) loadTrack(preset)
+            }}
+          >
+            <option value="" disabled>
+              Load preset…
             </option>
-          ))}
-        </select>
-        <button type="button" data-testid="undo-button" disabled={!canUndo} onClick={undo}>
-          Undo
-        </button>
-        <button type="button" data-testid="redo-button" disabled={!canRedo} onClick={redo}>
-          Redo
-        </button>
-        <button
-          type="button"
-          data-testid="start-line-tool-button"
-          aria-pressed={toolMode === 'start-line'}
-          onClick={() => setToolMode((m) => (m === 'start-line' ? 'select' : 'start-line'))}
-        >
-          {toolMode === 'start-line' ? 'Click a point to set as start…' : 'Set start/finish line'}
-        </button>
-        <button
-          type="button"
-          data-testid="checkpoint-tool-button"
-          aria-pressed={toolMode === 'checkpoint'}
-          onClick={() => setToolMode((m) => (m === 'checkpoint' ? 'select' : 'checkpoint'))}
-        >
-          {toolMode === 'checkpoint' ? 'Click points to toggle checkpoints…' : 'Edit checkpoints'}
-        </button>
-        <button
-          type="button"
-          data-testid="snap-to-grid-button"
-          aria-pressed={snapToGridEnabled}
-          onClick={() => setSnapToGridEnabled((v) => !v)}
-        >
-          Snap to grid: {snapToGridEnabled ? 'On' : 'Off'}
-        </button>
-        <button
-          type="button"
-          data-testid="pan-tool-button"
-          aria-pressed={toolMode === 'pan'}
-          onClick={() => setToolMode((m) => (m === 'pan' ? 'select' : 'pan'))}
-        >
-          {toolMode === 'pan' ? 'Drag to pan…' : 'Pan'}
-        </button>
-        <button type="button" data-testid="start-race-button" disabled={!canRace} onClick={() => setMode('race')}>
-          Start Race
-        </button>
-        <button type="button" data-testid="browse-tracks-button" onClick={() => setMode('browse')}>
-          Browse Tracks
-        </button>
+            {PRESET_TRACKS.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="text"
+            data-testid="save-name-input"
+            value={saveName}
+            placeholder="Track name"
+            onChange={(e) => setSaveName(e.target.value)}
+          />
+          <button
+            type="button"
+            data-testid="save-track-button"
+            disabled={!saveName.trim()}
+            onClick={() => {
+              const saved = saveTrack(doc, saveName.trim())
+              loadTrack(saved)
+              setSavedTracks(listSavedTracks())
+            }}
+          >
+            Save track
+          </button>
+          <select
+            data-testid="load-saved-select"
+            defaultValue=""
+            onChange={(e) => {
+              const found = loadSavedTrack(e.target.value)
+              if (found) {
+                loadTrack(found)
+                setSaveName(found.name)
+              }
+            }}
+          >
+            <option value="" disabled>
+              Load saved track…
+            </option>
+            {savedTracks.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            data-testid="share-track-button"
+            disabled={!canRace}
+            onClick={() => {
+              setShareError(null)
+              shareTrack({ ...doc, name: saveName.trim() || doc.name })
+                .then((res) => {
+                  recordCreatedTrack(res.id)
+                  setSharedTrackId(res.id)
+                  setShareUrl(`${window.location.origin}${window.location.pathname}?track=${res.id}`)
+                })
+                .catch(() => setShareError('Could not share the track - is the server running?'))
+            }}
+          >
+            Share track
+          </button>
+        </div>
+        <div className="toolbar-group toolbar-group--tools">
+          <button type="button" data-testid="undo-button" disabled={!canUndo} onClick={undo}>
+            Undo
+          </button>
+          <button type="button" data-testid="redo-button" disabled={!canRedo} onClick={redo}>
+            Redo
+          </button>
+          <button
+            type="button"
+            data-testid="start-line-tool-button"
+            aria-pressed={toolMode === 'start-line'}
+            onClick={() => setToolMode((m) => (m === 'start-line' ? 'select' : 'start-line'))}
+          >
+            {toolMode === 'start-line' ? 'Click a point to set as start…' : 'Set start/finish line'}
+          </button>
+          <button
+            type="button"
+            data-testid="checkpoint-tool-button"
+            aria-pressed={toolMode === 'checkpoint'}
+            onClick={() => setToolMode((m) => (m === 'checkpoint' ? 'select' : 'checkpoint'))}
+          >
+            {toolMode === 'checkpoint' ? 'Click points to toggle checkpoints…' : 'Edit checkpoints'}
+          </button>
+          <button
+            type="button"
+            data-testid="snap-to-grid-button"
+            aria-pressed={snapToGridEnabled}
+            onClick={() => setSnapToGridEnabled((v) => !v)}
+          >
+            Snap to grid: {snapToGridEnabled ? 'On' : 'Off'}
+          </button>
+          <button
+            type="button"
+            data-testid="pan-tool-button"
+            aria-pressed={toolMode === 'pan'}
+            onClick={() => setToolMode((m) => (m === 'pan' ? 'select' : 'pan'))}
+          >
+            {toolMode === 'pan' ? 'Drag to pan…' : 'Pan'}
+          </button>
+        </div>
+        <div className="toolbar-group toolbar-group--nav">
+          <button
+            type="button"
+            className="button-primary"
+            data-testid="start-race-button"
+            disabled={!canRace}
+            onClick={() => setMode('race')}
+          >
+            Start Race
+          </button>
+          <button type="button" data-testid="browse-tracks-button" onClick={() => setMode('browse')}>
+            Browse Tracks
+          </button>
+        </div>
       </div>
       <div className="toolbar">
-        <input
-          type="text"
-          data-testid="save-name-input"
-          value={saveName}
-          placeholder="Track name"
-          onChange={(e) => setSaveName(e.target.value)}
-        />
-        <button
-          type="button"
-          data-testid="save-track-button"
-          disabled={!saveName.trim()}
-          onClick={() => {
-            const saved = saveTrack(doc, saveName.trim())
-            loadTrack(saved)
-            setSavedTracks(listSavedTracks())
-          }}
-        >
-          Save track
-        </button>
-        <select
-          data-testid="load-saved-select"
-          defaultValue=""
-          onChange={(e) => {
-            const found = loadSavedTrack(e.target.value)
-            if (found) {
-              loadTrack(found)
-              setSaveName(found.name)
-            }
-          }}
-        >
-          <option value="" disabled>
-            Load saved track…
-          </option>
-          {savedTracks.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          data-testid="share-track-button"
-          disabled={!canRace}
-          onClick={() => {
-            setShareError(null)
-            shareTrack({ ...doc, name: saveName.trim() || doc.name })
-              .then((res) => {
-                recordCreatedTrack(res.id)
-                setSharedTrackId(res.id)
-                setShareUrl(`${window.location.origin}${window.location.pathname}?track=${res.id}`)
-              })
-              .catch(() => setShareError('Could not share the track - is the server running?'))
-          }}
-        >
-          Share track
-        </button>
         {shareUrl && <input type="text" data-testid="share-url-output" readOnly value={shareUrl} />}
         {shareError && <span className="validation-errors">{shareError}</span>}
       </div>

@@ -1,10 +1,22 @@
+:root {
+  --panel-bg: rgba(16, 20, 24, 0.85);
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --accent: #ef9b0f;
+  --accent-text: #1a1203;
+  --text-primary: #e6e6e6;
+  --text-muted: #9aa0a6;
+  --radius-md: 6px;
+  --space-sm: 8px;
+  --space-md: 16px;
+}
+
 .app-shell {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
   padding: 24px;
-  color: #e6e6e6;
+  color: var(--text-primary);
   background: #0b0d10;
   min-height: 100vh;
 }
@@ -15,7 +27,58 @@
 
 .toolbar {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+.toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+}
+
+.toolbar button,
+.toolbar select,
+.toolbar input {
+  background: #1a1f26;
+  color: var(--text-primary);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.toolbar button:disabled,
+.toolbar select:disabled {
+  color: var(--text-muted);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.toolbar-group--tools button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+.button-primary {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.button-primary:disabled {
+  background: #1a1f26;
+  color: var(--text-muted);
+  border-color: var(--panel-border);
+  font-weight: normal;
 }
 
 .editor-panels {
@@ -67,7 +130,10 @@
   font-family: ui-monospace, monospace;
   font-size: 18px;
   color: #fff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
 }
 
 .validation-errors {
@@ -75,18 +141,25 @@
   max-width: 640px;
 }
 
-.camera-toggle {
+.camera-toggle,
+.restart-button {
   position: absolute;
-  top: 56px;
   right: 16px;
   z-index: 10;
+  background: var(--panel-bg);
+  color: #fff;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.camera-toggle {
+  top: 56px;
 }
 
 .restart-button {
-  position: absolute;
-  top: 88px;
-  right: 16px;
-  z-index: 10;
+  top: 100px;
 }
 
 .countdown-overlay {
@@ -105,13 +178,14 @@
 
 .leaderboard-panel {
   position: absolute;
-  top: 100px;
+  top: 148px;
   right: 16px;
   z-index: 10;
-  background: rgba(16, 20, 24, 0.85);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
   color: #fff;
   padding: 12px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   max-width: 260px;
   font-size: 14px;
 }
