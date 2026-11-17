@@ -121,4 +121,65 @@ describe('useRaceSession', () => {
     expect(result.current.lastLapSeconds).not.toBeNull()
     expect(result.current.bestLapSeconds).toBe(firstBest) // unchanged - the slower lap didn't overwrite it
   })
+
+  it('resetAttempt clears live lap progress but preserves best lap and ghost', () => {
+    const doc = squareTrackWithCheckpoints()
+    const generated = generateTrack(doc)
+    const { result } = renderHook(() => useRaceSession(doc, generated))
+    const { startGate, checkpointGates } = computeRaceGates(doc, generated)
+
+    act(() => {
+      for (let i = 0; i < 40; i++) {
+        result.current.handleTick(fakeState(startGate.position.x, startGate.position.z), i, NEUTRAL)
+      }
+      crossGate(result.current.handleTick, checkpointGates[0], 41)
+      crossGate(result.current.handleTick, checkpointGates[1], 43)
+      crossGate(result.current.handleTick, startGate, 45)
+    })
+    const bestBefore = result.current.bestLapSeconds
+    const ghostBefore = result.current.ghostInputLog
+    expect(bestBefore).not.toBeNull()
+
+    act(() => {
+      result.current.resetAttempt()
+    })
+
+    expect(result.current.liveLapSeconds).toBe(0)
+    expect(result.current.bestLapSeconds).toBe(bestBefore)
+    expect(result.current.ghostInputLog).toBe(ghostBefore)
+  })
+
+  it('resetAttempt drops in-progress checkpoint sequence so a stale crossing cannot complete a lap', () => {
+    const doc = squareTrackWithCheckpoints()
+    const generated = generateTrack(doc)
+    const { result } = renderHook(() => useRaceSession(doc, generated))
+    const { startGate, checkpointGates } = computeRaceGates(doc, generated)
+
+    act(() => {
+      for (let i = 0; i < 40; i++) {
+        result.current.handleTick(fakeState(startGate.position.x, startGate.position.z), i, NEUTRAL)
+      }
+      // Cross both checkpoints, then reset before crossing the start line.
+      crossGate(result.current.handleTick, checkpointGates[0], 41)
+      crossGate(result.current.handleTick, checkpointGates[1], 43)
+      result.current.resetAttempt()
+      // Crossing the start line now should not complete a lap, since checkpoint progress was reset.
+      crossGate(result.current.handleTick, startGate, 45)
+    })
+
+    expect(result.current.lastLapSeconds).toBeNull()
+
+    act(() => {
+      // Warm up past MIN_TICKS_BETWEEN_CROSSINGS again before attempting the next valid lap.
+      for (let i = 0; i < 40; i++) {
+        result.current.handleTick(fakeState(startGate.position.x, startGate.position.z), 50 + i, NEUTRAL)
+      }
+      // A full, valid lap after the reset should still complete normally.
+      crossGate(result.current.handleTick, checkpointGates[0], 100)
+      crossGate(result.current.handleTick, checkpointGates[1], 102)
+      crossGate(result.current.handleTick, startGate, 104)
+    })
+
+    expect(result.current.lastLapSeconds).not.toBeNull()
+  })
 })

@@ -1,10 +1,18 @@
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useFrame } from '@react-three/fiber'
 import { useMemo, useRef, useState } from 'react'
 import type { TrackDocument } from '../domain/track/schema'
 import { generateTrack } from '../domain/generation/generateTrack'
 import { useKeyboardCarInput } from '../hooks/useKeyboardCarInput'
 import { useRaceSession } from '../hooks/useRaceSession'
+import { useRestartKey } from '../hooks/useRestartKey'
 import { createInitialCarState, type CarState } from '../domain/physics/carPhysics'
+import {
+  createCountdownState,
+  formatCountdownPhase,
+  isControllable,
+  tickCountdown,
+  type CountdownState,
+} from '../domain/race/countdown'
 import { RibbonMesh3D, RoadMesh3D } from './RoadMesh3D'
 import { CarRig } from './CarRig'
 import { GhostRig } from './GhostRig'
@@ -30,21 +38,42 @@ function formatLapTime(seconds: number): string {
   return `${minutes}:${secs}`
 }
 
+/** Renders inside the Canvas to advance the countdown using the same real-elapsed-time clock as the physics loop, so it doesn't drift under tab throttling. */
+function CountdownDriver({ active, onTick }: { active: boolean; onTick: (deltaSeconds: number) => void }) {
+  useFrame((_, delta) => {
+    if (active) onTick(delta)
+  })
+  return null
+}
+
 /** Renders the generated track and a keyboard/gamepad-drivable car with lap timing, best-lap ghost, and switchable camera. */
 export function RaceScene({ doc, trackId = null }: RaceSceneProps) {
   const generated = useMemo(() => generateTrack(doc), [doc])
   const inputRef = useKeyboardCarInput()
   const [cameraMode, setCameraMode] = useState<CameraMode>('chase')
+  const [countdown, setCountdown] = useState<CountdownState>(createCountdownState)
+  const [resetToken, setResetToken] = useState(0)
 
   const startHeadingRad = degToRad(generated.spawn.headingDeg)
   const carStateRef = useRef<CarState>(
     createInitialCarState(generated.spawn.position.x, generated.spawn.position.z, startHeadingRad),
   )
 
-  const { liveLapSeconds, lastLapSeconds, bestLapSeconds, ghostInputLog, handleTick } = useRaceSession(
+  const { liveLapSeconds, lastLapSeconds, bestLapSeconds, ghostInputLog, handleTick, resetAttempt } = useRaceSession(
     doc,
     generated,
   )
+
+  const controllable = isControllable(countdown.phase)
+
+  const handleRestart = () => {
+    carStateRef.current = createInitialCarState(generated.spawn.position.x, generated.spawn.position.z, startHeadingRad)
+    setResetToken((t) => t + 1)
+    resetAttempt()
+    setCountdown(createCountdownState())
+  }
+
+  useRestartKey(handleRestart)
 
   return (
     <>
@@ -65,6 +94,14 @@ export function RaceScene({ doc, trackId = null }: RaceSceneProps) {
       >
         Camera: {cameraMode === 'chase' ? 'Chase' : 'Top-down'}
       </button>
+      <button type="button" className="restart-button" data-testid="restart-button" onClick={handleRestart}>
+        Restart
+      </button>
+      {countdown.phase !== null && (
+        <div className="countdown-overlay" data-testid="countdown-overlay">
+          {formatCountdownPhase(countdown.phase)}
+        </div>
+      )}
       <Canvas data-testid="race-canvas" camera={{ fov: 60 }}>
         <ambientLight intensity={1.2} />
         <directionalLight position={[50, 100, 50]} intensity={2} />
@@ -79,6 +116,8 @@ export function RaceScene({ doc, trackId = null }: RaceSceneProps) {
           spawnY={generated.spawn.position.y}
           inputRef={inputRef}
           track={generated}
+          controllable={controllable}
+          resetToken={resetToken}
           onTick={handleTick}
         />
         <GhostRig spawn={generated.spawn} inputLog={ghostInputLog} track={generated} />
@@ -87,6 +126,7 @@ export function RaceScene({ doc, trackId = null }: RaceSceneProps) {
         ) : (
           <TopDownCamera carStateRef={carStateRef} />
         )}
+        <CountdownDriver active={countdown.phase !== null} onTick={(delta) => setCountdown((c) => tickCountdown(c, delta))} />
       </Canvas>
       <LeaderboardPanel trackId={trackId} bestLapInputLog={ghostInputLog} hasBestLap={bestLapSeconds !== null} />
     </>
