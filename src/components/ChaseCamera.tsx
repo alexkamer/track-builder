@@ -23,6 +23,10 @@ export function ChaseCamera({ carStateRef, track }: ChaseCameraProps) {
     const car = carStateRef.current
     if (!car) return
 
+    // TopDownCamera repoints "up" to look straight down without rolling; reset it here every
+    // frame so switching back from top-down doesn't leave this camera rolled 90 degrees.
+    camera.up.set(0, 1, 0)
+
     const roadY = elevationAt(car, track)
     const targetX = car.x - Math.sin(car.headingRad) * BEHIND_DISTANCE
     const targetZ = car.z - Math.cos(car.headingRad) * BEHIND_DISTANCE

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createControlPoint, createTrackDocument } from '../track/schema'
 import { generateTrack } from '../generation/generateTrack'
-import { elevationAt, isOnRoadSurface } from './trackSurface'
+import { bankingAt, elevationAt, isOnRoadSurface } from './trackSurface'
 
 function wideSquareTrack() {
   return createTrackDocument({
@@ -22,6 +22,18 @@ function hillyTrack() {
       createControlPoint({ x: 200, z: 0, width: 20, elevation: 20 }),
       createControlPoint({ x: 200, z: 200, width: 20, elevation: 0 }),
       createControlPoint({ x: 0, z: 200, width: 20, elevation: 0 }),
+    ],
+    startLine: { controlPointIndex: 0, headingDeg: 90 },
+  })
+}
+
+function bankedTrack() {
+  return createTrackDocument({
+    controlPoints: [
+      createControlPoint({ x: 0, z: 0, width: 20, bankingDeg: 0 }),
+      createControlPoint({ x: 200, z: 0, width: 20, bankingDeg: 30 }),
+      createControlPoint({ x: 200, z: 200, width: 20, bankingDeg: 0 }),
+      createControlPoint({ x: 0, z: 200, width: 20, bankingDeg: 0 }),
     ],
     startLine: { controlPointIndex: 0, headingDeg: 90 },
   })
@@ -71,5 +83,22 @@ describe('elevationAt', () => {
     const b = elevationAt({ x: 152, z: 0 }, track)
     expect(Math.abs(b - a)).toBeGreaterThan(0)
     expect(Math.abs(b - a)).toBeLessThan(1)
+  })
+})
+
+describe('bankingAt', () => {
+  it('is 0 on a flat, unbanked track', () => {
+    const track = generateTrack(wideSquareTrack())
+    expect(bankingAt({ x: 200, z: 0 }, track)).toBe(0)
+  })
+
+  it('matches a control point exact banking', () => {
+    const track = generateTrack(bankedTrack())
+    expect(bankingAt({ x: 200, z: 0 }, track)).toBeCloseTo((30 * Math.PI) / 180, 10)
+  })
+
+  it('is steeper near a banked control point than near a flat one', () => {
+    const track = generateTrack(bankedTrack())
+    expect(bankingAt({ x: 200, z: 0 }, track)).toBeGreaterThan(bankingAt({ x: 0, z: 0 }, track))
   })
 })

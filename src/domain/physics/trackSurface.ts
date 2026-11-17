@@ -36,25 +36,42 @@ export function nearestCenterlineIndex(pos: Position2D, track: GeneratedTrack): 
 }
 
 /**
- * The road surface's height at the point on the centerline nearest `pos`, linearly
- * interpolated between the two centerline rings straddling `pos` (rather than snapping to
- * whichever ring is nearest) so the car/ghost mesh rises and falls smoothly instead of
- * stepping between ring heights as it crosses ring boundaries.
+ * Linearly interpolates a per-ring scalar (`valueAt`) between the two centerline rings
+ * straddling `pos`, rather than snapping to whichever ring is nearest - used so values that
+ * vary along the track (elevation, banking) change smoothly as the car crosses ring
+ * boundaries instead of stepping.
  */
-export function elevationAt(pos: Position2D, track: GeneratedTrack): number {
+function interpolateAlongCenterline(pos: Position2D, track: GeneratedTrack, valueAt: (index: number) => number): number {
   const { centerline } = track
   const n = centerline.length
   const index = nearestCenterlineIndex(pos, track)
-  const curr = centerline[index]
-  const next = centerline[(index + 1) % n]
-  const prev = centerline[(index - 1 + n) % n]
+  const nextIndex = (index + 1) % n
+  const prevIndex = (index - 1 + n) % n
 
-  const forward = projectOntoSegment(pos, curr, next)
-  const backward = projectOntoSegment(pos, prev, curr)
+  const forward = projectOntoSegment(pos, centerline[index], centerline[nextIndex])
+  const backward = projectOntoSegment(pos, centerline[prevIndex], centerline[index])
 
   return forward.distSq <= backward.distSq
-    ? curr.y + (next.y - curr.y) * forward.t
-    : prev.y + (curr.y - prev.y) * backward.t
+    ? valueAt(index) + (valueAt(nextIndex) - valueAt(index)) * forward.t
+    : valueAt(prevIndex) + (valueAt(index) - valueAt(prevIndex)) * backward.t
+}
+
+/**
+ * The road surface's height at the point on the centerline nearest `pos`, smoothly
+ * interpolated between centerline rings so the car/ghost mesh rises and falls continuously
+ * instead of stepping between ring heights as it crosses ring boundaries.
+ */
+export function elevationAt(pos: Position2D, track: GeneratedTrack): number {
+  return interpolateAlongCenterline(pos, track, (i) => track.centerline[i].y)
+}
+
+/**
+ * The road's banking (roll) in radians at the point on the centerline nearest `pos`, smoothly
+ * interpolated the same way as {@link elevationAt}. Positive banks the left edge up - see
+ * `generateTrack`'s `offsetAt`. Used to roll the car to match the road surface it's on.
+ */
+export function bankingAt(pos: Position2D, track: GeneratedTrack): number {
+  return interpolateAlongCenterline(pos, track, (i) => track.bankingRad[i])
 }
 
 /**

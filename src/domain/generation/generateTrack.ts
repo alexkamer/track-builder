@@ -36,6 +36,8 @@ export interface GeneratedTrack {
   barrierRight: RibbonMesh
   spawn: SpawnTransform
   centerline: Vec3[]
+  /** Road banking in radians, one entry per `centerline` ring - positive banks the left edge up. */
+  bankingRad: number[]
   startLineTrigger: CheckpointTrigger
   checkpointTriggers: CheckpointTrigger[]
 }
@@ -191,6 +193,7 @@ export function generateTrack(doc: TrackDocument): GeneratedTrack {
     barrierRight,
     spawn,
     centerline,
+    bankingRad: frames.map((f) => f.bankingRad),
     startLineTrigger,
     checkpointTriggers,
   }
