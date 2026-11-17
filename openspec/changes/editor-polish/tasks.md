@@ -5,7 +5,7 @@
 - [x] 1.1 Expose a load-identity signal from `useTrackEditorHistory` (reuse `doc.id` + `doc.createdAt`, or add a `loadVersion` counter if those don't change on every load path) and pass it through `App.tsx` to `TrackEditor2D`
 - [x] 1.2 In `TrackEditor2D`, compute a bounding-box fit (`zoom`/`panX`/`panY` clamped to `[MIN_ZOOM, MAX_ZOOM]`, centered, with padding; fall back to the current default view for degenerate/near-empty bounds) and apply it in a `useEffect` keyed on the load-identity signal, not on every `doc` change; verify via a test that loading a preset with far-off-origin control points results in a view transform containing all points, and that dragging/adding a point afterward does not reset the view
 - [x] 1.3 Add a test asserting `LiveTrackPreview3D`'s existing `CameraFraming` repositions the camera to frame the full track when `doc` changes via a load (not just an in-place edit), covering the proposal's explicit "on load" scenario
-- [ ] 1.4 Manually verify in the running app: load each of the preset tracks with large coordinate ranges and confirm the 2D canvas and 3D preview both show the full track without manual zoom/pan
+- [x] 1.4 Manually verify in the running app: load each of the preset tracks with large coordinate ranges and confirm the 2D canvas and 3D preview both show the full track without manual zoom/pan
 
 ## 2. Delete-control-point UI
 
@@ -14,9 +14,9 @@
 
 ## 3. Keyboard shortcuts for undo/redo/delete
 
-- [ ] 3.1 Add a `keydown` listener (e.g. in `App.tsx`, or a small `useEditorKeyboardShortcuts` hook) that calls `undo()` on Ctrl/Cmd+Z, `redo()` on Ctrl+Y or Ctrl/Cmd+Shift+Z, and dispatches delete-selected-point on Delete/Backspace, each only when the event target is not a text input/textarea; verify with tests simulating each key combination against `canUndo`/`canRedo`/selection state
-- [ ] 3.2 Verify shortcuts are no-ops when history is empty (no undo/redo available) or when focus is in the save-name, author, or description input (typing "Backspace" in those fields must not delete a control point); add a regression test for each
-- [ ] 3.3 Manually verify in the running app on both a Ctrl-based and Cmd-based keyboard mapping (or simulate `metaKey`/`ctrlKey` in tests) that each shortcut matches its corresponding button's behavior
+- [x] 3.1 Add a `keydown` listener (e.g. in `App.tsx`, or a small `useEditorKeyboardShortcuts` hook) that calls `undo()` on Ctrl/Cmd+Z, `redo()` on Ctrl+Y or Ctrl/Cmd+Shift+Z, and dispatches delete-selected-point on Delete/Backspace, each only when the event target is not a text input/textarea; verify with tests simulating each key combination against `canUndo`/`canRedo`/selection state
+- [x] 3.2 Verify shortcuts are no-ops when history is empty (no undo/redo available) or when focus is in the save-name, author, or description input (typing "Backspace" in those fields must not delete a control point); add a regression test for each
+- [x] 3.3 Manually verify in the running app on both a Ctrl-based and Cmd-based keyboard mapping (or simulate `metaKey`/`ctrlKey` in tests) that each shortcut matches its corresponding button's behavior
 
 ## 4. Track metadata (author/description) editing UI
 

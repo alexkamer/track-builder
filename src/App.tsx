@@ -4,6 +4,7 @@ import { LiveTrackPreview3D } from './components/LiveTrackPreview3D'
 import { ControlPointInspector } from './components/ControlPointInspector'
 import { RaceScene } from './components/RaceScene'
 import { useTrackEditorHistory } from './hooks/useTrackEditorHistory'
+import { useEditorKeyboardShortcuts } from './hooks/useEditorKeyboardShortcuts'
 import { validateTrack } from './domain/track/validation'
 import { PRESET_TRACKS } from './domain/track/presets'
 import { listSavedTracks, loadTrack as loadSavedTrack, saveTrack } from './domain/track/trackStorage'
@@ -46,6 +47,8 @@ function App() {
     dispatch({ type: 'DELETE_POINT', index: selectedIndex })
     setSelectedIndex(null)
   }
+
+  useEditorKeyboardShortcuts({ undo, redo, canUndo, canRedo, deleteSelected: deleteSelectedPoint })
 
   if (mode === 'race') {
     return (
