@@ -26,3 +26,9 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_lap_times_track ON lap_times(track_id, time_ticks);
 `)
+
+try {
+  db.exec('ALTER TABLE tracks ADD COLUMN creator_session_id TEXT')
+} catch (err) {
+  if (!(err instanceof Error) || !err.message.includes('duplicate column name')) throw err
+}

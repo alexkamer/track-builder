@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import App from './App'
 
 describe('App race-mode gating', () => {
@@ -24,5 +24,27 @@ describe('App race-mode gating', () => {
     fireEvent.mouseDown(screen.getByTestId('control-point-0'))
 
     expect(screen.getByText('Start Race')).toBeEnabled()
+  })
+})
+
+describe('App browse mode', () => {
+  it('navigating to browse mode and back preserves editor state', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ tracks: [] }) }),
+    )
+    render(<App />)
+    const canvas = screen.getByTestId('track-editor-canvas')
+    fireEvent.click(canvas, { clientX: 0, clientY: 0, target: canvas })
+    fireEvent.click(canvas, { clientX: 300, clientY: 0, target: canvas })
+
+    fireEvent.click(screen.getByTestId('browse-tracks-button'))
+    await waitFor(() => expect(screen.getByTestId('track-browser')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByText('Back to editor'))
+    expect(screen.getByTestId('track-editor-canvas')).toBeInTheDocument()
+    expect(screen.getAllByTestId(/^control-point-\d+$/)).toHaveLength(2)
+
+    vi.restoreAllMocks()
   })
 })
