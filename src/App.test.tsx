@@ -13,10 +13,11 @@ describe('App race-mode gating', () => {
     const canvas = screen.getByTestId('track-editor-canvas')
 
     // Place 3 control points by clicking directly on the canvas background, spaced
-    // widely enough to clear the minimum corner radius check.
+    // widely enough to clear the minimum corner radius check (now calibrated against
+    // the car's actual achievable turn radius, so this needs to be bigger than before).
     fireEvent.click(canvas, { clientX: 0, clientY: 0, target: canvas })
-    fireEvent.click(canvas, { clientX: 300, clientY: 0, target: canvas })
-    fireEvent.click(canvas, { clientX: 150, clientY: 300, target: canvas })
+    fireEvent.click(canvas, { clientX: 450, clientY: 0, target: canvas })
+    fireEvent.click(canvas, { clientX: 225, clientY: 450, target: canvas })
 
     expect(screen.getByText('Start Race')).toBeDisabled()
 

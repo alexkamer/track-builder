@@ -3,12 +3,14 @@ import { createControlPoint, createTrackDocument } from '../track/schema'
 import { generateTrack, SAMPLES_PER_SEGMENT, TrackNotValidatedError } from './generateTrack'
 
 function validSquareTrack() {
+  // 150x150 (not 50x50): big enough that every corner clears MIN_CORNER_RADIUS,
+  // which is now calibrated against the car's actual achievable turn radius.
   return createTrackDocument({
     controlPoints: [
       createControlPoint({ x: 0, z: 0, width: 10 }),
-      createControlPoint({ x: 50, z: 0, width: 10 }),
-      createControlPoint({ x: 50, z: 50, width: 10 }),
-      createControlPoint({ x: 0, z: 50, width: 10 }),
+      createControlPoint({ x: 150, z: 0, width: 10 }),
+      createControlPoint({ x: 150, z: 150, width: 10 }),
+      createControlPoint({ x: 0, z: 150, width: 10 }),
     ],
     startLine: { controlPointIndex: 0, headingDeg: 90 },
   })

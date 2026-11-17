@@ -6,12 +6,14 @@ import { createControlPoint, createTrackDocument } from '../domain/track/schema'
 import { generateTrack } from '../domain/generation/generateTrack'
 
 function squareTrack() {
+  // 150x150 (not 100x100): big enough that every corner clears MIN_CORNER_RADIUS,
+  // which is now calibrated against the car's actual achievable turn radius.
   return createTrackDocument({
     controlPoints: [
       createControlPoint({ x: 0, z: 0, width: 10 }),
-      createControlPoint({ x: 100, z: 0, width: 10 }),
-      createControlPoint({ x: 100, z: 100, width: 10 }),
-      createControlPoint({ x: 0, z: 100, width: 10 }),
+      createControlPoint({ x: 150, z: 0, width: 10 }),
+      createControlPoint({ x: 150, z: 150, width: 10 }),
+      createControlPoint({ x: 0, z: 150, width: 10 }),
     ],
     startLine: { controlPointIndex: 0, headingDeg: 90 },
   })
