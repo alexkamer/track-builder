@@ -10,9 +10,11 @@ import { validateTrack } from './domain/track/validation'
 import { PRESET_TRACKS } from './domain/track/presets'
 import { listSavedTracks, loadTrack as loadSavedTrack, saveTrack } from './domain/track/trackStorage'
 import { fetchSharedTrack, shareTrack } from './api/client'
+import { recordCreatedTrack } from './domain/session/myTracks'
+import { TrackBrowser } from './components/TrackBrowser'
 import './App.css'
 
-type Mode = 'edit' | 'race'
+type Mode = 'edit' | 'race' | 'browse'
 
 function App() {
   const { doc, dispatch, commit, undo, redo, loadTrack, canUndo, canRedo, loadKey } = useTrackEditorHistory()
@@ -58,6 +60,28 @@ function App() {
           Back to editor
         </button>
         <RaceScene doc={doc} trackId={sharedTrackId} />
+      </div>
+    )
+  }
+
+  if (mode === 'browse') {
+    return (
+      <div className="app-shell">
+        <button type="button" onClick={() => setMode('edit')}>
+          Back to editor
+        </button>
+        <TrackBrowser
+          onOpenTrack={(id) => {
+            fetchSharedTrack(id)
+              .then((fetchedDoc) => {
+                loadTrack(fetchedDoc)
+                setSaveName(fetchedDoc.name)
+                setSharedTrackId(id)
+                setMode('edit')
+              })
+              .catch(() => setShareError('Could not load the selected track.'))
+          }}
+        />
       </div>
     )
   }
@@ -124,6 +148,9 @@ function App() {
         <button type="button" data-testid="start-race-button" disabled={!canRace} onClick={() => setMode('race')}>
           Start Race
         </button>
+        <button type="button" data-testid="browse-tracks-button" onClick={() => setMode('browse')}>
+          Browse Tracks
+        </button>
       </div>
       <div className="toolbar">
         <input
@@ -173,6 +200,7 @@ function App() {
             setShareError(null)
             shareTrack({ ...doc, name: saveName.trim() || doc.name })
               .then((res) => {
+                recordCreatedTrack(res.id)
                 setSharedTrackId(res.id)
                 setShareUrl(`${window.location.origin}${window.location.pathname}?track=${res.id}`)
               })

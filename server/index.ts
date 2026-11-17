@@ -24,6 +24,7 @@ interface TrackRow {
   name: string
   document: string
   created_at: string
+  creator_session_id: string | null
 }
 
 interface LapTimeRow {
@@ -32,7 +33,7 @@ interface LapTimeRow {
 }
 
 app.post('/api/tracks', (req, res) => {
-  const incoming = req.body as Partial<TrackDocument>
+  const { creatorSessionId, ...incoming } = req.body as Partial<TrackDocument> & { creatorSessionId?: string }
   if (!incoming || !Array.isArray(incoming.controlPoints)) {
     return res.status(400).json({ error: 'A track document with controlPoints is required.' })
   }
@@ -48,18 +49,64 @@ app.post('/api/tracks', (req, res) => {
   }
 
   const stmt = db.prepare(
-    `INSERT INTO tracks (id, name, document, created_at) VALUES (?, ?, ?, ?)
+    `INSERT INTO tracks (id, name, document, created_at, creator_session_id) VALUES (?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET name = excluded.name, document = excluded.document`,
   )
-  stmt.run(doc.id, doc.name, JSON.stringify(doc), new Date().toISOString())
+  stmt.run(doc.id, doc.name, JSON.stringify(doc), new Date().toISOString(), creatorSessionId || null)
 
   res.status(201).json({ id: doc.id, shareUrl: `/track/${doc.id}`, document: doc })
+})
+
+app.get('/api/tracks', (_req, res) => {
+  const rows = db
+    .prepare('SELECT id, name, created_at FROM tracks ORDER BY created_at DESC')
+    .all() as unknown as Array<{ id: string; name: string; created_at: string }>
+  res.json({
+    tracks: rows.map((r) => ({ id: r.id, name: r.name, createdAt: r.created_at })),
+  })
 })
 
 app.get('/api/tracks/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM tracks WHERE id = ?').get(req.params.id) as TrackRow | undefined
   if (!row) return res.status(404).json({ error: 'Track not found.' })
   res.json({ document: JSON.parse(row.document) as TrackDocument })
+})
+
+app.patch('/api/tracks/:id', (req, res) => {
+  const row = db.prepare('SELECT * FROM tracks WHERE id = ?').get(req.params.id) as TrackRow | undefined
+  if (!row) return res.status(404).json({ error: 'Track not found.' })
+
+  const { name, sessionId } = req.body as { name?: string; sessionId?: string }
+  if (!row.creator_session_id || row.creator_session_id !== sessionId) {
+    return res.status(403).json({ error: 'Only the creating session may rename this track.' })
+  }
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'A non-empty name is required.' })
+  }
+
+  const doc = { ...(JSON.parse(row.document) as TrackDocument), name: name.trim() }
+  db.prepare('UPDATE tracks SET name = ?, document = ? WHERE id = ?').run(
+    name.trim(),
+    JSON.stringify(doc),
+    row.id,
+  )
+
+  res.json({ id: row.id, name: name.trim() })
+})
+
+app.delete('/api/tracks/:id', (req, res) => {
+  const row = db.prepare('SELECT * FROM tracks WHERE id = ?').get(req.params.id) as TrackRow | undefined
+  if (!row) return res.status(404).json({ error: 'Track not found.' })
+
+  const { sessionId } = req.body as { sessionId?: string }
+  if (!row.creator_session_id || row.creator_session_id !== sessionId) {
+    return res.status(403).json({ error: 'Only the creating session may delete this track.' })
+  }
+
+  db.prepare('DELETE FROM lap_times WHERE track_id = ?').run(row.id)
+  db.prepare('DELETE FROM tracks WHERE id = ?').run(row.id)
+
+  res.status(204).end()
 })
 
 app.post('/api/tracks/:id/laptimes', (req, res) => {

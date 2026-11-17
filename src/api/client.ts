@@ -1,5 +1,6 @@
 import type { TrackDocument } from '../domain/track/schema'
 import type { CarInput } from '../domain/physics/carPhysics'
+import { getOrCreateSessionId } from '../domain/session/anonymousSession'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:3001'
 
@@ -13,10 +14,41 @@ export async function shareTrack(doc: TrackDocument): Promise<CreateTrackRespons
   const res = await fetch(`${API_BASE}/api/tracks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(doc),
+    body: JSON.stringify({ ...doc, creatorSessionId: getOrCreateSessionId() }),
   })
   if (!res.ok) throw new Error(`Failed to share track: ${res.status}`)
   return res.json()
+}
+
+export interface TrackSummary {
+  id: string
+  name: string
+  createdAt: string
+}
+
+export async function listTracks(): Promise<TrackSummary[]> {
+  const res = await fetch(`${API_BASE}/api/tracks`)
+  if (!res.ok) throw new Error(`Failed to list tracks: ${res.status}`)
+  const body = await res.json()
+  return body.tracks
+}
+
+export async function renameTrack(id: string, name: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/tracks/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, sessionId: getOrCreateSessionId() }),
+  })
+  if (!res.ok) throw new Error(`Failed to rename track: ${res.status}`)
+}
+
+export async function deleteTrack(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/tracks/${id}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: getOrCreateSessionId() }),
+  })
+  if (!res.ok) throw new Error(`Failed to delete track: ${res.status}`)
 }
 
 export async function fetchSharedTrack(id: string): Promise<TrackDocument> {

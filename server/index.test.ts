@@ -160,4 +160,114 @@ describe('Trackforge API', () => {
     )
     expect(leaderboard.some((e: { displayName: string }) => e.displayName === 'Anonymous')).toBe(true)
   })
+
+  it('lists saved tracks without requiring their ids', async () => {
+    const created = await (
+      await fetch(`${baseUrl}/api/tracks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(circleTrack(100, 16, 80)),
+      })
+    ).json()
+
+    const listRes = await fetch(`${baseUrl}/api/tracks`)
+    expect(listRes.status).toBe(200)
+    const { tracks } = await listRes.json()
+    expect(tracks.some((t: { id: string }) => t.id === created.id)).toBe(true)
+  })
+
+  it('records the creator session on first save and does not let a later save change it', async () => {
+    const doc = circleTrack(100, 16, 80)
+    const created = await (
+      await fetch(`${baseUrl}/api/tracks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...doc, creatorSessionId: 'session-a' }),
+      })
+    ).json()
+
+    await fetch(`${baseUrl}/api/tracks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...created.document, creatorSessionId: 'session-b' }),
+    })
+
+    const renameRes = await fetch(`${baseUrl}/api/tracks/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Renamed', sessionId: 'session-b' }),
+    })
+    expect(renameRes.status).toBe(403)
+  })
+
+  it('lets the creating session rename its track and rejects other sessions', async () => {
+    const created = await (
+      await fetch(`${baseUrl}/api/tracks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...circleTrack(100, 16, 80), creatorSessionId: 'owner-session' }),
+      })
+    ).json()
+
+    const rejectRes = await fetch(`${baseUrl}/api/tracks/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Nope', sessionId: 'other-session' }),
+    })
+    expect(rejectRes.status).toBe(403)
+
+    const okRes = await fetch(`${baseUrl}/api/tracks/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Renamed Track', sessionId: 'owner-session' }),
+    })
+    expect(okRes.status).toBe(200)
+
+    const getRes = await fetch(`${baseUrl}/api/tracks/${created.id}`)
+    const { document } = await getRes.json()
+    expect(document.name).toBe('Renamed Track')
+  })
+
+  it('rejects renaming a track with no stored creator', async () => {
+    const created = await (
+      await fetch(`${baseUrl}/api/tracks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(circleTrack(100, 16, 80)),
+      })
+    ).json()
+
+    const res = await fetch(`${baseUrl}/api/tracks/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Nope', sessionId: 'anyone' }),
+    })
+    expect(res.status).toBe(403)
+  })
+
+  it('lets the creating session delete its track and rejects other sessions', async () => {
+    const created = await (
+      await fetch(`${baseUrl}/api/tracks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...circleTrack(100, 16, 80), creatorSessionId: 'owner-session' }),
+      })
+    ).json()
+
+    const rejectRes = await fetch(`${baseUrl}/api/tracks/${created.id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: 'other-session' }),
+    })
+    expect(rejectRes.status).toBe(403)
+    expect((await fetch(`${baseUrl}/api/tracks/${created.id}`)).status).toBe(200)
+
+    const okRes = await fetch(`${baseUrl}/api/tracks/${created.id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: 'owner-session' }),
+    })
+    expect(okRes.status).toBe(204)
+    expect((await fetch(`${baseUrl}/api/tracks/${created.id}`)).status).toBe(404)
+  })
 })

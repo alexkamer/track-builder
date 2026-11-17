@@ -7,7 +7,7 @@ Persists user-created tracks, lets them be shared and reopened via a unique URL,
 ## Requirements
 
 ### Requirement: Save and load tracks losslessly
-The system SHALL save a track as a versioned JSON document matching the track data schema and SHALL load it back into an editable track that is identical to the one saved, with no loss of control points, width, elevation, banking, checkpoints, start line, or metadata.
+The system SHALL save a track as a versioned JSON document matching the track data schema and SHALL load it back into an editable track that is identical to the one saved, with no loss of control points, width, elevation, banking, checkpoints, start line, or metadata. The system SHALL also record the anonymous session that saved a new track as its creator.
 
 #### Scenario: Round-trip save and load
 - **WHEN** a track is saved and then loaded back
@@ -16,6 +16,10 @@ The system SHALL save a track as a versioned JSON document matching the track da
 #### Scenario: Saving a track assigns a name
 - **WHEN** the user saves a track and provides a name
 - **THEN** the saved track document stores that name
+
+#### Scenario: Saving a new track records its creator
+- **WHEN** a user's anonymous session saves a track for the first time
+- **THEN** that session id is stored as the track's creator for later ownership checks
 
 ### Requirement: Shareable track URL
 The system SHALL generate a unique URL for each saved track such that opening that URL loads the same track for racing, without requiring the opener to have created or previously accessed it.
