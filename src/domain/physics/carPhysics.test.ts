@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { createInitialCarState, NEUTRAL_INPUT, stepCarPhysics, type CarInput } from './carPhysics'
+import {
+  achievableTurnRadius,
+  createInitialCarState,
+  DEFAULT_CAR_PARAMS,
+  NEUTRAL_INPUT,
+  stepCarPhysics,
+  type CarInput,
+} from './carPhysics'
 import { runFixedTimestepSimulation } from './fixedTimestepLoop'
 
 const FIXED_DT = 1 / 60
@@ -119,6 +126,19 @@ describe('stepCarPhysics grip/drift', () => {
 
     const dist = Math.hypot(withDrift.x - noDrift.x, withDrift.z - noDrift.z)
     expect(dist).toBeGreaterThan(0.1)
+  })
+})
+
+describe('achievableTurnRadius', () => {
+  it('matches maxSpeed / baseTurnRate for the given params', () => {
+    expect(achievableTurnRadius(DEFAULT_CAR_PARAMS)).toBeCloseTo(
+      DEFAULT_CAR_PARAMS.maxSpeed / DEFAULT_CAR_PARAMS.baseTurnRate,
+      10,
+    )
+  })
+
+  it('defaults to DEFAULT_CAR_PARAMS when no params are given', () => {
+    expect(achievableTurnRadius()).toBeCloseTo(achievableTurnRadius(DEFAULT_CAR_PARAMS), 10)
   })
 })
 

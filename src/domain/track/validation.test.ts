@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createControlPoint, createTrackDocument } from './schema'
+import { achievableTurnRadius } from '../physics/carPhysics'
 import {
+  MIN_CORNER_RADIUS,
   validateClosedLoop,
   validateCornerRadius,
   validateSelfIntersection,
@@ -84,6 +86,13 @@ describe('validateSelfIntersection', () => {
   it('fails for a self-intersecting (bowtie) track', () => {
     const doc = createTrackDocument({ controlPoints: bowtieTrack() })
     expect(validateSelfIntersection(doc)?.code).toBe('SELF_INTERSECTION')
+  })
+})
+
+describe('MIN_CORNER_RADIUS', () => {
+  it('is derived from the car\'s achievable turn radius with a safety margin', () => {
+    expect(MIN_CORNER_RADIUS).toBeGreaterThan(achievableTurnRadius())
+    expect(MIN_CORNER_RADIUS).toBeGreaterThanOrEqual(achievableTurnRadius() * 1.2)
   })
 })
 

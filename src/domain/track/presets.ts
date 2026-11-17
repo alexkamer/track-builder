@@ -25,16 +25,19 @@ function serpentineCircuit(): TrackDocument {
   return createTrackDocument({
     id: 'preset-serpentine-circuit',
     name: 'Serpentine Circuit',
+    // Scaled 2x from the original layout (uniformly, about the origin) so the tightest
+    // corner (near the last control point) clears the car's realistic minimum turning
+    // radius - see MIN_CORNER_RADIUS in ../track/validation.ts.
     controlPoints: [
       createControlPoint({ x: 0, z: 0, width }),
-      createControlPoint({ x: 100, z: -40, width }),
-      createControlPoint({ x: 200, z: 0, width }),
-      createControlPoint({ x: 260, z: 80, width }),
-      createControlPoint({ x: 220, z: 160, width }),
-      createControlPoint({ x: 120, z: 180, width }),
-      createControlPoint({ x: 40, z: 140, width }),
-      createControlPoint({ x: -40, z: 100, width }),
-      createControlPoint({ x: -80, z: 40, width }),
+      createControlPoint({ x: 200, z: -80, width }),
+      createControlPoint({ x: 400, z: 0, width }),
+      createControlPoint({ x: 520, z: 160, width }),
+      createControlPoint({ x: 440, z: 320, width }),
+      createControlPoint({ x: 240, z: 360, width }),
+      createControlPoint({ x: 80, z: 280, width }),
+      createControlPoint({ x: -80, z: 200, width }),
+      createControlPoint({ x: -160, z: 80, width }),
     ],
     startLine: { controlPointIndex: 0, headingDeg: 60 },
     metadata: { description: 'A winding circuit with a mix of fast and technical corners.' },

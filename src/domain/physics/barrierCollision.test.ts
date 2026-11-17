@@ -54,6 +54,56 @@ describe('resolveBarrierCollision', () => {
     expect(resolveBarrierCollision(state, track)).toEqual(state)
   })
 
+  it('retains more speed on a shallow-angle (grazing) hit than a near-head-on hit', () => {
+    const track = generateTrack(wideSquareTrack())
+    // Same outward offset, same incoming speed; only the heading (impact angle) differs.
+    const basePos = { x: 100, z: -100 }
+    const grazing = { ...createInitialCarState(basePos.x, basePos.z, Math.PI / 2), speed: 20 }
+    const headOn = { ...createInitialCarState(basePos.x, basePos.z, 0), speed: 20 }
+
+    const grazingResult = resolveBarrierCollision(grazing, track)
+    const headOnResult = resolveBarrierCollision(headOn, track)
+
+    expect(grazingResult.speed).toBeGreaterThan(headOnResult.speed)
+  })
+
+  it('biases the redirect heading toward the track interior rather than exactly along the tangent', () => {
+    const track = generateTrack(wideSquareTrack())
+    const state = { ...createInitialCarState(100, -100, Math.PI / 2), speed: 20 }
+    const result = resolveBarrierCollision(state, track)
+
+    const index = nearestCenterlineIndex(state, track)
+    const center = track.centerline[index]
+    const leftBase = track.barrierLeft.positions[index * 2]
+    const rightBase = track.barrierRight.positions[index * 2]
+    const normalX = (leftBase.x - rightBase.x) / Math.hypot(leftBase.x - rightBase.x, leftBase.z - rightBase.z)
+    const normalZ = (leftBase.z - rightBase.z) / Math.hypot(leftBase.x - rightBase.x, leftBase.z - rightBase.z)
+
+    const dx = state.x - center.x
+    const dz = state.z - center.z
+    const lateralOffset = dx * normalX + dz * normalZ
+    const inwardSign = -Math.sign(lateralOffset)
+
+    const forwardX = Math.sin(result.headingRad)
+    const forwardZ = Math.cos(result.headingRad)
+    const inwardComponent = forwardX * (inwardSign * normalX) + forwardZ * (inwardSign * normalZ)
+
+    expect(inwardComponent).toBeGreaterThan(0)
+  })
+
+  it('floors post-collision speed above a minimum escape speed across repeated grazing hits', () => {
+    const track = generateTrack(wideSquareTrack())
+    let state = { ...createInitialCarState(100, -100, Math.PI / 2 - 0.05), speed: 10 }
+
+    for (let i = 0; i < 5; i++) {
+      state = resolveBarrierCollision(state, track)
+      // Re-push the car just outside the barrier to force another collision next call,
+      // simulating sustained throttle/steer back into the wall.
+      state = { ...state, x: 100, z: -100 }
+      expect(state.speed).toBeGreaterThanOrEqual(3)
+    }
+  })
+
   it('regression: does not permanently freeze the car at near-zero speed after repeated contact', () => {
     // A car that clips a barrier while turning into it used to get crushed to near-zero
     // speed every tick forever (heading kept pointing back into the wall, so every tick

@@ -1,9 +1,16 @@
 import type { TrackDocument } from './schema'
 import { UNSET_START_LINE } from './schema'
 import { sampleClosedCatmullRom } from './spline'
+import { achievableTurnRadius } from '../physics/carPhysics'
 
 export const MIN_CONTROL_POINTS = 3
-export const MIN_CORNER_RADIUS = 5
+/**
+ * Margin above the car's bare achievable turn radius (see `achievableTurnRadius`):
+ * real driving rarely holds the exact theoretical steering limit through a corner, so the
+ * validated minimum needs headroom for an imperfect line, late braking, or drift correction.
+ */
+const CORNER_RADIUS_SAFETY_MARGIN = 1.4
+export const MIN_CORNER_RADIUS = achievableTurnRadius() * CORNER_RADIUS_SAFETY_MARGIN
 export const VALIDATION_SAMPLES_PER_SEGMENT = 16
 /** Segments within this index distance (wrapping) of each other share an endpoint region and are never flagged as crossing. */
 const ADJACENT_SEGMENT_WINDOW = 2

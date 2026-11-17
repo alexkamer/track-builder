@@ -47,6 +47,17 @@ export const DEFAULT_CAR_PARAMS: CarPhysicsParams = {
   offTrackDecay: 2.5,
 }
 
+/**
+ * The tightest turning radius the car can achieve at full steering lock. Turn rate is
+ * `steer * baseTurnRate * (|speed| / maxSpeed)`, so radius = speed / turnRate reduces to
+ * `maxSpeed / baseTurnRate` at `steer = 1` - independent of speed, since turn rate scales
+ * linearly with speed in this model. Used to calibrate the track editor's minimum corner
+ * radius validation against what the car can actually drive.
+ */
+export function achievableTurnRadius(params: CarPhysicsParams = DEFAULT_CAR_PARAMS): number {
+  return params.maxSpeed / params.baseTurnRate
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }
