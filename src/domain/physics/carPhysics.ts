@@ -55,7 +55,14 @@ export interface CarPhysicsParams {
   maxLateralSlip: number
   /** How quickly actual lateral slip approaches its speed/steering-driven target, 1/second - higher = more grip. */
   gripResponseRate: number
-  /** Extra per-second speed decay applied while off the road surface, on top of normal drag. */
+  /**
+   * Extra per-second speed decay applied while off the road surface, on top of normal drag.
+   * Tuned low enough that the car can still accelerate and steer back onto a curving road
+   * after clipping the edge - a steeper value traps the car in a self-reinforcing spiral
+   * (slower speed -> less turn authority, since turn rate scales with speed -> can't catch
+   * back up to a curving road -> stays off-track), which reads as "the car never goes fast"
+   * rather than as a corner-cutting penalty.
+   */
   offTrackDecay: number
 }
 
@@ -68,7 +75,7 @@ export const DEFAULT_CAR_PARAMS: CarPhysicsParams = {
   baseTurnRate: 2.2,
   maxLateralSlip: 14,
   gripResponseRate: 6,
-  offTrackDecay: 2.5,
+  offTrackDecay: 0.8,
 }
 
 /**

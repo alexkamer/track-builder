@@ -156,6 +156,18 @@ describe('stepCarPhysics off-track penalty', () => {
     const explicitOnTrack = stepCarPhysics(driveUpToSpeed(90), NEUTRAL_INPUT, FIXED_DT, undefined, false)
     expect(withDefault).toEqual(explicitOnTrack)
   })
+
+  it('still lets the car accelerate to a meaningful speed while continuously off-track', () => {
+    // Regression guard: offTrackDecay must stay low enough that full throttle off-track still
+    // climbs well above a crawl. A too-harsh value combined with turn rate scaling with speed
+    // creates a self-reinforcing trap (slower -> less turn authority -> can't steer back onto
+    // a curving road -> stays off-track) that reads as "the car never goes fast".
+    let state = createInitialCarState(0, 0, 0)
+    for (let i = 0; i < 300; i++) {
+      state = stepCarPhysics(state, { throttle: 1, brake: 0, steer: 0 }, FIXED_DT, undefined, true)
+    }
+    expect(state.speed).toBeGreaterThan(DEFAULT_CAR_PARAMS.maxSpeed * 0.3)
+  })
 })
 
 describe('interpolateCarState', () => {

@@ -35,13 +35,27 @@ export function nearestCenterlineIndex(pos: Position2D, track: GeneratedTrack): 
   return bestIndex
 }
 
+interface NearestCenterlinePoint {
+  /** Squared perpendicular distance from `pos` to the nearest point on the centerline polyline (not just the nearest sample). */
+  distSq: number
+  /** Ring index at the start of the segment `pos` projects onto. */
+  a: number
+  /** Ring index at the end of that segment. */
+  b: number
+  /** Fraction (0..1) along the `a`→`b` segment of the closest point. */
+  t: number
+}
+
 /**
- * Linearly interpolates a per-ring scalar (`valueAt`) between the two centerline rings
- * straddling `pos`, rather than snapping to whichever ring is nearest - used so values that
- * vary along the track (elevation, banking) change smoothly as the car crosses ring
- * boundaries instead of stepping.
+ * Finds the closest point to `pos` on the centerline treated as a connected polyline (the
+ * two segments adjacent to whichever ring sample is nearest), not just the nearest sample
+ * point. Sample points can be sparse relative to how sharply the path curves - most notably
+ * right after the start/finish ring, where the closed-loop Catmull-Rom tangent can point the
+ * first couple of samples off at an angle - so measuring distance to the nearest *sample*
+ * instead of the nearest point *on the path* both under- and over-estimates how far off the
+ * road a position actually is.
  */
-function interpolateAlongCenterline(pos: Position2D, track: GeneratedTrack, valueAt: (index: number) => number): number {
+function nearestPointOnCenterline(pos: Position2D, track: GeneratedTrack): NearestCenterlinePoint {
   const { centerline } = track
   const n = centerline.length
   const index = nearestCenterlineIndex(pos, track)
@@ -52,8 +66,25 @@ function interpolateAlongCenterline(pos: Position2D, track: GeneratedTrack, valu
   const backward = projectOntoSegment(pos, centerline[prevIndex], centerline[index])
 
   return forward.distSq <= backward.distSq
-    ? valueAt(index) + (valueAt(nextIndex) - valueAt(index)) * forward.t
-    : valueAt(prevIndex) + (valueAt(index) - valueAt(prevIndex)) * backward.t
+    ? { distSq: forward.distSq, a: index, b: nextIndex, t: forward.t }
+    : { distSq: backward.distSq, a: prevIndex, b: index, t: backward.t }
+}
+
+/**
+ * Linearly interpolates a per-ring scalar (`valueAt`) between the two centerline rings
+ * straddling `pos`, rather than snapping to whichever ring is nearest - used so values that
+ * vary along the track (elevation, banking) change smoothly as the car crosses ring
+ * boundaries instead of stepping.
+ */
+function interpolateAlongCenterline(pos: Position2D, track: GeneratedTrack, valueAt: (index: number) => number): number {
+  const { a, b, t } = nearestPointOnCenterline(pos, track)
+  return valueAt(a) + (valueAt(b) - valueAt(a)) * t
+}
+
+function ringHalfWidth(track: GeneratedTrack, index: number): number {
+  const left = track.roadMesh.positions[index * 2]
+  const right = track.roadMesh.positions[index * 2 + 1]
+  return Math.hypot(left.x - right.x, left.z - right.z) / 2
 }
 
 /**
@@ -75,16 +106,15 @@ export function bankingAt(pos: Position2D, track: GeneratedTrack): number {
 }
 
 /**
- * True when `pos` lies within the road's width at the nearest point along the centerline.
- * Used each physics tick to decide whether the off-track speed penalty applies.
+ * True when `pos` lies within the road's width of the nearest point *on* the centerline
+ * (not just the nearest sample - see {@link nearestPointOnCenterline}). Used each physics
+ * tick to decide whether the off-track speed penalty applies.
  */
 export function isOnRoadSurface(pos: Position2D, track: GeneratedTrack): boolean {
-  const index = nearestCenterlineIndex(pos, track)
-  const left = track.roadMesh.positions[index * 2]
-  const right = track.roadMesh.positions[index * 2 + 1]
-  const halfWidth = Math.hypot(left.x - right.x, left.z - right.z) / 2
-  const dx = pos.x - track.centerline[index].x
-  const dz = pos.z - track.centerline[index].z
+  const { distSq, a, b, t } = nearestPointOnCenterline(pos, track)
+  const halfWidthA = ringHalfWidth(track, a)
+  const halfWidthB = ringHalfWidth(track, b)
+  const halfWidth = halfWidthA + (halfWidthB - halfWidthA) * t
 
-  return Math.hypot(dx, dz) <= halfWidth
+  return distSq <= halfWidth * halfWidth
 }
