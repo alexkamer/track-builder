@@ -173,7 +173,7 @@ The system SHALL validate that the track's curve does not cross itself, and SHAL
 - **THEN** validation fails with an error stating the track self-intersects
 
 ### Requirement: Minimum corner radius validation
-The system SHALL validate that every point along the track's curve has a turning radius no smaller than a minimum derived from the car's actual achievable turn radius at full steering lock plus a safety margin, and SHALL report a clear error identifying the violation if it does not.
+The system SHALL validate that every point along the track's curve has a turning radius no smaller than a minimum derived from the car's actual achievable turn radius at full steering lock plus a safety margin, and SHALL report a clear error identifying the violation, including the location of the offending corner, if it does not.
 
 #### Scenario: Track meets minimum radius
 - **WHEN** every point along the curve has a turning radius at or above the minimum
@@ -181,11 +181,15 @@ The system SHALL validate that every point along the track's curve has a turning
 
 #### Scenario: Track violates minimum radius
 - **WHEN** any point along the curve has a turning radius below the minimum
-- **THEN** validation fails with an error indicating a corner is too tight
+- **THEN** validation fails with an error indicating a corner is too tight and identifying which control point the violation is nearest to
 
 #### Scenario: Minimum radius reflects car physics
 - **WHEN** the car's physics parameters (maximum speed and turn rate) determine its tightest achievable turn radius at full steering lock
 - **THEN** the minimum corner radius validation threshold is at or above that achievable radius, by a margin large enough that a track validated at the threshold is drivable through its tightest corner without constant barrier contact
+
+#### Scenario: Multiple corners violate the minimum radius
+- **WHEN** more than one point along the curve has a turning radius below the minimum
+- **THEN** validation fails identifying the first violating corner encountered, without requiring the user to inspect the entire curve to find it
 
 ### Requirement: Start line validation
 The system SHALL validate that exactly one control point is designated as the start/finish line with a defined heading before a track can be raced, and SHALL report a clear error if none or more than one is set.

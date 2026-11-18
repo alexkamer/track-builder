@@ -106,6 +106,13 @@ describe('validateCornerRadius', () => {
     const doc = createTrackDocument({ controlPoints: sharpSpikeTrack() })
     expect(validateCornerRadius(doc)?.code).toBe('CORNER_RADIUS_TOO_TIGHT')
   })
+
+  it('identifies the offending control point in the error message', () => {
+    const doc = createTrackDocument({ controlPoints: sharpSpikeTrack() })
+    const error = validateCornerRadius(doc)
+    // sharpSpikeTrack's near-U-turns are at the two short ends, control points 1 and 2.
+    expect(error?.message).toMatch(/control point [12]\b/)
+  })
 })
 
 describe('validateTrackMinimal', () => {

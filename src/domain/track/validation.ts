@@ -141,9 +141,10 @@ export function validateCornerRadius(doc: TrackDocument): ValidationError | null
     const curr = curve[i]
     const next = curve[(i + 1) % n]
     if (circumradius(prev, curr, next) < MIN_CORNER_RADIUS) {
+      const controlPointIndex = Math.floor(i / VALIDATION_SAMPLES_PER_SEGMENT) % doc.controlPoints.length
       return {
         code: 'CORNER_RADIUS_TOO_TIGHT',
-        message: `A corner is tighter than the minimum turning radius of ${MIN_CORNER_RADIUS} units. Widen that curve.`,
+        message: `A corner near control point ${controlPointIndex} (${curr.x.toFixed(1)}, ${curr.z.toFixed(1)}) is tighter than the minimum turning radius of ${MIN_CORNER_RADIUS} units. Widen that curve.`,
       }
     }
   }
