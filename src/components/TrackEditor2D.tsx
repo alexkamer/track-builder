@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { TrackDocument } from '../domain/track/schema'
-import { createControlPoint } from '../domain/track/schema'
+import { createControlPoint, UNSET_START_LINE } from '../domain/track/schema'
 import type { EditorAction } from '../domain/track/editorReducer'
 import { sampleClosedCatmullRom } from '../domain/track/spline'
 import { DEFAULT_GRID_SIZE, snapToGrid } from '../domain/track/grid'
@@ -248,14 +248,67 @@ export function TrackEditor2D({
       ? `M ${curvePoints.map((p) => `${p.x},${p.z}`).join(' L ')} Z`
       : ''
 
+  // Decorative direction-of-travel chevrons: a handful of evenly-spaced samples along the
+  // curve, each oriented along the local tangent so they visibly point the way around the loop.
+  const CHEVRON_COUNT = 8
+  const chevrons =
+    curvePoints.length >= CHEVRON_COUNT
+      ? Array.from({ length: CHEVRON_COUNT }, (_, i) => {
+          // Offset by half a step so chevrons land between control points rather than
+          // exactly on them, where the (larger, later-painted) point markers would hide them.
+          const index = Math.floor(((i + 0.5) / CHEVRON_COUNT) * curvePoints.length) % curvePoints.length
+          const prev = curvePoints[(index - 1 + curvePoints.length) % curvePoints.length]
+          const next = curvePoints[(index + 1) % curvePoints.length]
+          const point = curvePoints[index]
+          const angleDeg = (Math.atan2(next.z - prev.z, next.x - prev.x) * 180) / Math.PI
+          return { x: point.x, z: point.z, angleDeg }
+        })
+      : []
+
+  const trackLength = curvePoints.reduce((total, point, i) => {
+    const prev = curvePoints[(i - 1 + curvePoints.length) % curvePoints.length]
+    return total + Math.hypot(point.x - prev.x, point.z - prev.z)
+  }, 0)
+
+  const startPoint =
+    doc.startLine.controlPointIndex !== UNSET_START_LINE
+      ? doc.controlPoints[doc.startLine.controlPointIndex]
+      : null
+  const startHeadingRad = (doc.startLine.headingDeg * Math.PI) / 180
+  // Perpendicular to the heading (the car's "right" vector, see carPhysics.ts), so the
+  // gantry line crosses the track rather than running along it.
+  const startRightX = Math.cos(startHeadingRad)
+  const startRightZ = -Math.sin(startHeadingRad)
+  const startHalfWidth = (startPoint?.width ?? 10) / 2 + 4
+
+  const radarMaxRadius = Math.min(width, height) / 2
+
+  // The grid overlay must cover whatever region of world-space is actually visible through
+  // the current pan/zoom, not a fixed patch anchored at world (0,0) sized to the canvas's own
+  // pixel dimensions - otherwise it renders as a small patch off to one side instead of
+  // centered under the track (e.g. for any preset not centered near the origin, or after
+  // panning). Snap lines to multiples of gridSize so they land on the same intersections
+  // snapToGrid() itself snaps points to, with a one-cell margin so lines reach the edges.
+  const visibleMinX = -view.panX / view.zoom
+  const visibleMaxX = (width - view.panX) / view.zoom
+  const visibleMinZ = -view.panY / view.zoom
+  const visibleMaxZ = (height - view.panY) / view.zoom
+  const gridMinX = Math.floor(visibleMinX / gridSize) * gridSize - gridSize
+  const gridMaxX = Math.ceil(visibleMaxX / gridSize) * gridSize + gridSize
+  const gridMinZ = Math.floor(visibleMinZ / gridSize) * gridSize - gridSize
+  const gridMaxZ = Math.ceil(visibleMaxZ / gridSize) * gridSize + gridSize
+  const gridColCount = Math.round((gridMaxX - gridMinX) / gridSize)
+  const gridRowCount = Math.round((gridMaxZ - gridMinZ) / gridSize)
+
   return (
+    <div className="canvas-frame">
     <svg
       ref={svgRef}
       data-testid="track-editor-canvas"
       width={width}
       height={height}
       style={{
-        background: '#101418',
+        background: '#060607',
         touchAction: 'none',
         cursor: pointClickMode === 'pan' ? 'grab' : pointClickMode === 'add-point' ? 'copy' : 'default',
       }}
@@ -266,27 +319,59 @@ export function TrackEditor2D({
       onMouseLeave={handleMouseUp}
       onWheel={handleWheel}
     >
+      <g stroke="#1c1c1f" fill="none">
+        <circle cx={width / 2} cy={height / 2} r={radarMaxRadius * 0.25} opacity={0.5} />
+        <circle cx={width / 2} cy={height / 2} r={radarMaxRadius * 0.5} opacity={0.5} />
+        <circle cx={width / 2} cy={height / 2} r={radarMaxRadius * 0.75} opacity={0.5} />
+        <circle cx={width / 2} cy={height / 2} r={radarMaxRadius} opacity={0.5} />
+        <line x1={width / 2} y1={0} x2={width / 2} y2={height} opacity={0.35} />
+        <line x1={0} y1={height / 2} x2={width} y2={height / 2} opacity={0.35} />
+      </g>
       <g
         data-testid="view-transform-group"
         transform={`translate(${view.panX},${view.panY}) scale(${view.zoom})`}
       >
         {snapToGridEnabled && (
-          <g data-testid="grid-overlay" stroke="#1f2730" strokeWidth={1 / view.zoom}>
-            {Array.from({ length: Math.ceil(width / gridSize) + 1 }, (_, i) => (
-              <line key={`v${i}`} x1={i * gridSize} y1={0} x2={i * gridSize} y2={height} />
-            ))}
-            {Array.from({ length: Math.ceil(height / gridSize) + 1 }, (_, i) => (
-              <line key={`h${i}`} x1={0} y1={i * gridSize} x2={width} y2={i * gridSize} />
-            ))}
+          <g data-testid="grid-overlay" stroke="#1c1c1f" strokeWidth={1 / view.zoom}>
+            {Array.from({ length: gridColCount + 1 }, (_, i) => {
+              const x = gridMinX + i * gridSize
+              return <line key={`v${i}`} x1={x} y1={gridMinZ} x2={x} y2={gridMaxZ} />
+            })}
+            {Array.from({ length: gridRowCount + 1 }, (_, i) => {
+              const z = gridMinZ + i * gridSize
+              return <line key={`h${i}`} x1={gridMinX} y1={z} x2={gridMaxX} y2={z} />
+            })}
           </g>
         )}
         {pathData && (
           <path
             d={pathData}
             fill="none"
-            stroke="#4ea8de"
+            stroke="#e8e8ea"
             strokeWidth={3 / view.zoom}
             data-testid="track-curve"
+          />
+        )}
+        {chevrons.length > 0 && (
+          <g stroke="#8c8c92" strokeWidth={2 / view.zoom} fill="none" strokeLinecap="round" opacity={0.6}>
+            {chevrons.map((chevron, i) => (
+              <path
+                key={i}
+                d={`M ${-5 / view.zoom},${-4 / view.zoom} L ${5 / view.zoom},0 L ${-5 / view.zoom},${4 / view.zoom}`}
+                transform={`translate(${chevron.x},${chevron.z}) rotate(${chevron.angleDeg})`}
+              />
+            ))}
+          </g>
+        )}
+        {startPoint && (
+          <line
+            data-testid="start-line-gantry"
+            x1={startPoint.x - startRightX * startHalfWidth}
+            y1={startPoint.z - startRightZ * startHalfWidth}
+            x2={startPoint.x + startRightX * startHalfWidth}
+            y2={startPoint.z + startRightZ * startHalfWidth}
+            stroke="#f5a623"
+            strokeWidth={3 / view.zoom}
           />
         )}
         {doc.controlPoints.map((point, index) => {
@@ -300,8 +385,8 @@ export function TrackEditor2D({
               cx={point.x}
               cy={point.z}
               r={(isSelected ? POINT_RADIUS + 3 : POINT_RADIUS) / view.zoom}
-              fill={isStart ? '#ffd166' : isCheckpoint ? '#06d6a0' : '#ef476f'}
-              stroke={isSelected ? '#4ea8de' : '#fff'}
+              fill={isStart ? '#f5a623' : isCheckpoint ? '#27c972' : '#1c1c1f'}
+              stroke={isSelected ? '#f5a623' : '#e8e8ea'}
               strokeWidth={(isSelected ? 3 : 1.5) / view.zoom}
               onMouseDown={handlePointMouseDown(index)}
             />
@@ -309,5 +394,10 @@ export function TrackEditor2D({
         })}
       </g>
     </svg>
+    <div className="canvas-readouts">
+      <span className="readout-chip">{doc.controlPoints.length} points</span>
+      {trackLength > 0 && <span className="readout-chip">{trackLength.toFixed(0)} m</span>}
+    </div>
+    </div>
   )
 }

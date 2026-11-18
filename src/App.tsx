@@ -4,6 +4,10 @@ import { LiveTrackPreview3D } from './components/LiveTrackPreview3D'
 import { ControlPointInspector } from './components/ControlPointInspector'
 import { TrackMetadataPanel } from './components/TrackMetadataPanel'
 import { RaceScene } from './components/RaceScene'
+import { EditorHeader } from './components/EditorHeader'
+import { EditorToolbar } from './components/EditorToolbar'
+import { EditorWorkArea } from './components/EditorWorkArea'
+import { getToolHint } from './domain/track/toolHints'
 import { useTrackEditorHistory } from './hooks/useTrackEditorHistory'
 import { useEditorKeyboardShortcuts } from './hooks/useEditorKeyboardShortcuts'
 import { validateTrack } from './domain/track/validation'
@@ -56,9 +60,11 @@ function App() {
   if (mode === 'race') {
     return (
       <div className="app-shell race-shell">
-        <button type="button" onClick={() => setMode('edit')}>
-          Back to editor
-        </button>
+        <div className="race-top-bar">
+          <button type="button" className="btn btn--ghost" onClick={() => setMode('edit')}>
+            Back to editor
+          </button>
+        </div>
         <RaceScene doc={doc} trackId={sharedTrackId} />
       </div>
     )
@@ -67,7 +73,7 @@ function App() {
   if (mode === 'browse') {
     return (
       <div className="app-shell">
-        <button type="button" onClick={() => setMode('edit')}>
+        <button type="button" className="btn btn--ghost" onClick={() => setMode('edit')}>
           Back to editor
         </button>
         <TrackBrowser
@@ -86,187 +92,99 @@ function App() {
     )
   }
 
+  const handleLoadPresetById = (id: string) => {
+    const preset = PRESET_TRACKS.find((t) => t.id === id)
+    if (preset) loadTrack(preset)
+  }
+
+  const handleLoadSavedById = (id: string) => {
+    const found = loadSavedTrack(id)
+    if (found) {
+      loadTrack(found)
+      setSaveName(found.name)
+    }
+  }
+
+  const handleSaveTrack = () => {
+    const saved = saveTrack(doc, saveName.trim())
+    loadTrack(saved)
+    setSavedTracks(listSavedTracks())
+  }
+
+  const handleShareTrack = () => {
+    setShareError(null)
+    shareTrack({ ...doc, name: saveName.trim() || doc.name })
+      .then((res) => {
+        recordCreatedTrack(res.id)
+        setSharedTrackId(res.id)
+        setShareUrl(`${window.location.origin}${window.location.pathname}?track=${res.id}`)
+      })
+      .catch(() => setShareError('Could not share the track - is the server running?'))
+  }
+
   return (
-    <div className="app-shell">
-      <h1>Trackforge Editor</h1>
-      <div className="toolbar">
-        <div className="toolbar-group toolbar-group--files">
-          <select
-            data-testid="preset-select"
-            defaultValue=""
-            onChange={(e) => {
-              const preset = PRESET_TRACKS.find((t) => t.id === e.target.value)
-              if (preset) loadTrack(preset)
-            }}
-          >
-            <option value="" disabled>
-              Load preset…
-            </option>
-            {PRESET_TRACKS.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
-            data-testid="save-name-input"
-            value={saveName}
-            placeholder="Track name"
-            onChange={(e) => setSaveName(e.target.value)}
+    <div className="editor-shell">
+      <EditorHeader title="Trackforge Editor" />
+      <EditorToolbar
+        saveName={saveName}
+        onSaveNameChange={setSaveName}
+        onLoadPresetById={handleLoadPresetById}
+        savedTracks={savedTracks}
+        onLoadSavedById={handleLoadSavedById}
+        onSaveTrack={handleSaveTrack}
+        canShare={canRace}
+        onShareTrack={handleShareTrack}
+        shareUrl={shareUrl}
+        shareError={shareError}
+        toolMode={toolMode}
+        onSetToolMode={setToolMode}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
+        snapToGridEnabled={snapToGridEnabled}
+        onToggleSnapToGrid={() => setSnapToGridEnabled((v) => !v)}
+        canRace={canRace}
+        errorCount={errors.length}
+        onStartRace={() => setMode('race')}
+        onBrowseTracks={() => setMode('browse')}
+      />
+      <EditorWorkArea
+        hint={getToolHint(toolMode)}
+        canvas={
+          <TrackEditor2D
+            doc={doc}
+            dispatch={dispatch}
+            onCommit={commit}
+            pointClickMode={toolMode}
+            selectedIndex={selectedIndex}
+            onSelectPoint={setSelectedIndex}
+            snapToGridEnabled={snapToGridEnabled}
+            loadKey={loadKey}
           />
-          <button
-            type="button"
-            data-testid="save-track-button"
-            disabled={!saveName.trim()}
-            onClick={() => {
-              const saved = saveTrack(doc, saveName.trim())
-              loadTrack(saved)
-              setSavedTracks(listSavedTracks())
-            }}
-          >
-            Save track
-          </button>
-          <select
-            data-testid="load-saved-select"
-            defaultValue=""
-            onChange={(e) => {
-              const found = loadSavedTrack(e.target.value)
-              if (found) {
-                loadTrack(found)
-                setSaveName(found.name)
-              }
-            }}
-          >
-            <option value="" disabled>
-              Load saved track…
-            </option>
-            {savedTracks.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
+        }
+        sideRail={
+          <>
+            <LiveTrackPreview3D doc={doc} />
+            <ControlPointInspector
+              doc={doc}
+              selectedIndex={selectedIndex}
+              dispatch={dispatch}
+              onDeletePoint={deleteSelectedPoint}
+            />
+          </>
+        }
+      />
+      <div className="editor-status-region">
+        <TrackMetadataPanel doc={doc} dispatch={dispatch} onCommit={commit} />
+        {errors.length > 0 && (
+          <ul className="validation-errors" data-testid="validation-errors">
+            {errors.map((e) => (
+              <li key={e.code}>{e.message}</li>
             ))}
-          </select>
-          <button
-            type="button"
-            data-testid="share-track-button"
-            disabled={!canRace}
-            onClick={() => {
-              setShareError(null)
-              shareTrack({ ...doc, name: saveName.trim() || doc.name })
-                .then((res) => {
-                  recordCreatedTrack(res.id)
-                  setSharedTrackId(res.id)
-                  setShareUrl(`${window.location.origin}${window.location.pathname}?track=${res.id}`)
-                })
-                .catch(() => setShareError('Could not share the track - is the server running?'))
-            }}
-          >
-            Share track
-          </button>
-        </div>
-        <div className="toolbar-group toolbar-group--tools">
-          <button
-            type="button"
-            data-testid="select-tool-button"
-            aria-pressed={toolMode === 'select'}
-            onClick={() => setToolMode('select')}
-          >
-            Select
-          </button>
-          <button
-            type="button"
-            data-testid="add-point-tool-button"
-            aria-pressed={toolMode === 'add-point'}
-            onClick={() => setToolMode((m) => (m === 'add-point' ? 'select' : 'add-point'))}
-          >
-            {toolMode === 'add-point' ? 'Click to add a point…' : 'Add point'}
-          </button>
-          <button type="button" data-testid="undo-button" disabled={!canUndo} onClick={undo}>
-            Undo
-          </button>
-          <button type="button" data-testid="redo-button" disabled={!canRedo} onClick={redo}>
-            Redo
-          </button>
-          <button
-            type="button"
-            data-testid="start-line-tool-button"
-            aria-pressed={toolMode === 'start-line'}
-            onClick={() => setToolMode((m) => (m === 'start-line' ? 'select' : 'start-line'))}
-          >
-            {toolMode === 'start-line' ? 'Click a point to set as start…' : 'Set start/finish line'}
-          </button>
-          <button
-            type="button"
-            data-testid="checkpoint-tool-button"
-            aria-pressed={toolMode === 'checkpoint'}
-            onClick={() => setToolMode((m) => (m === 'checkpoint' ? 'select' : 'checkpoint'))}
-          >
-            {toolMode === 'checkpoint' ? 'Click points to toggle checkpoints…' : 'Edit checkpoints'}
-          </button>
-          <button
-            type="button"
-            data-testid="snap-to-grid-button"
-            aria-pressed={snapToGridEnabled}
-            onClick={() => setSnapToGridEnabled((v) => !v)}
-          >
-            Snap to grid: {snapToGridEnabled ? 'On' : 'Off'}
-          </button>
-          <button
-            type="button"
-            data-testid="pan-tool-button"
-            aria-pressed={toolMode === 'pan'}
-            onClick={() => setToolMode((m) => (m === 'pan' ? 'select' : 'pan'))}
-          >
-            {toolMode === 'pan' ? 'Drag to pan…' : 'Pan'}
-          </button>
-        </div>
-        <div className="toolbar-group toolbar-group--nav">
-          <button
-            type="button"
-            className="button-primary"
-            data-testid="start-race-button"
-            disabled={!canRace}
-            onClick={() => setMode('race')}
-          >
-            Start Race
-          </button>
-          <button type="button" data-testid="browse-tracks-button" onClick={() => setMode('browse')}>
-            Browse Tracks
-          </button>
-        </div>
+          </ul>
+        )}
       </div>
-      <div className="toolbar">
-        {shareUrl && <input type="text" data-testid="share-url-output" readOnly value={shareUrl} />}
-        {shareError && <span className="validation-errors">{shareError}</span>}
-      </div>
-      <TrackMetadataPanel doc={doc} dispatch={dispatch} onCommit={commit} />
-      <div className="editor-panels">
-        <TrackEditor2D
-          doc={doc}
-          dispatch={dispatch}
-          onCommit={commit}
-          pointClickMode={toolMode}
-          selectedIndex={selectedIndex}
-          onSelectPoint={setSelectedIndex}
-          snapToGridEnabled={snapToGridEnabled}
-          loadKey={loadKey}
-        />
-        <LiveTrackPreview3D doc={doc} />
-        <ControlPointInspector
-          doc={doc}
-          selectedIndex={selectedIndex}
-          dispatch={dispatch}
-          onDeletePoint={deleteSelectedPoint}
-        />
-      </div>
-      {errors.length > 0 && (
-        <ul className="validation-errors" data-testid="validation-errors">
-          {errors.map((e) => (
-            <li key={e.code}>{e.message}</li>
-          ))}
-        </ul>
-      )}
     </div>
   )
 }

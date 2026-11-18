@@ -27,6 +27,34 @@ export function boundingRadiusOf(roadMesh: RibbonMesh, center: { x: number; z: n
   )
 }
 
+/** Approximate centerline length, used only for the preview panel's readout - walks the
+ * midpoint of each ring's left/right edge around the loop. */
+function centerlineLengthOf(roadMesh: RibbonMesh): number {
+  const ringCount = roadMesh.ringCount
+  const midpoint = (ring: number) => {
+    const a = roadMesh.positions[ring * 2]
+    const b = roadMesh.positions[ring * 2 + 1]
+    return { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 }
+  }
+  let length = 0
+  for (let i = 0; i < ringCount; i++) {
+    const a = midpoint(i)
+    const b = midpoint((i + 1) % ringCount)
+    length += Math.hypot(b.x - a.x, b.z - a.z)
+  }
+  return length
+}
+
+function elevationRangeOf(roadMesh: RibbonMesh): number {
+  let min = Infinity
+  let max = -Infinity
+  for (const p of roadMesh.positions) {
+    if (p.y < min) min = p.y
+    if (p.y > max) max = p.y
+  }
+  return max - min
+}
+
 /** Frames the camera on the track's centroid whenever the mesh changes shape. */
 function CameraFraming({ roadMesh }: { roadMesh: RibbonMesh }) {
   const camera = useThree((state) => state.camera)
@@ -50,18 +78,41 @@ export function LiveTrackPreview3D({ doc, width = 420, height = 480 }: LiveTrack
   const roadMesh = generateRoadMeshPreview(doc)
 
   return (
-    <div style={{ width, height, background: '#06080a' }} data-testid="live-3d-preview">
-      {roadMesh ? (
-        <Canvas camera={{ fov: 50 }}>
-          <ambientLight intensity={1.2} />
-          <directionalLight position={[50, 100, 50]} intensity={2} />
-          <RoadMesh3D roadMesh={roadMesh} />
-          <CameraFraming roadMesh={roadMesh} />
-        </Canvas>
-      ) : (
-        <p style={{ color: '#8a8f98', padding: 16 }}>
-          Add at least 3 control points to see the 3D preview.
-        </p>
+    <div className="panel" data-testid="live-3d-preview">
+      <div className="panel-head">
+        <h3 className="panel-title">3D Preview</h3>
+        <span className="live-tag">
+          <span className="live-dot" />
+          Live
+        </span>
+      </div>
+      <div className="viewfinder">
+        <div className="preview-surface" style={{ width, height }}>
+          {roadMesh ? (
+            <Canvas camera={{ fov: 50 }}>
+              <ambientLight intensity={1.2} />
+              <directionalLight position={[50, 100, 50]} intensity={2} />
+              <RoadMesh3D roadMesh={roadMesh} />
+              <CameraFraming roadMesh={roadMesh} />
+            </Canvas>
+          ) : (
+            <p>Add at least 3 control points to see the 3D preview.</p>
+          )}
+        </div>
+        <span className="bracket tl" />
+        <span className="bracket tr" />
+        <span className="bracket bl" />
+        <span className="bracket br" />
+      </div>
+      {roadMesh && (
+        <div className="preview-caption">
+          <span>
+            Length <strong>{centerlineLengthOf(roadMesh).toFixed(0)} m</strong>
+          </span>
+          <span>
+            Elev. range <strong>{elevationRangeOf(roadMesh).toFixed(1)} m</strong>
+          </span>
+        </div>
       )}
     </div>
   )

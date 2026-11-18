@@ -28,6 +28,28 @@ describe('App race-mode gating', () => {
   })
 })
 
+describe('App race-entry validation summary', () => {
+  it('shows an error count beside the disabled Start Race button for an invalid track, and clears it once valid', () => {
+    render(<App />)
+    const canvas = screen.getByTestId('track-editor-canvas')
+
+    expect(screen.getByText('Start Race')).toBeDisabled()
+    expect(screen.getByTestId('race-validation-summary')).toBeInTheDocument()
+    expect(screen.getByTestId('validation-errors')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('add-point-tool-button'))
+    fireEvent.click(canvas, { clientX: 0, clientY: 0, target: canvas })
+    fireEvent.click(canvas, { clientX: 450, clientY: 0, target: canvas })
+    fireEvent.click(canvas, { clientX: 225, clientY: 450, target: canvas })
+    fireEvent.click(screen.getByText('Set start/finish line'))
+    fireEvent.mouseDown(screen.getByTestId('control-point-0'))
+
+    expect(screen.getByText('Start Race')).toBeEnabled()
+    expect(screen.queryByTestId('race-validation-summary')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('validation-errors')).not.toBeInTheDocument()
+  })
+})
+
 describe('App delete control point', () => {
   it('clears selection after deleting the selected point', () => {
     render(<App />)

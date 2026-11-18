@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Trackforge — Blueprint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c1a26;
+    --surface: #102434;
+    --surface-raised: #15324a;
+    --line: #2d5876;
+    --line-strong: #4a7fa0;
+    --cyan: #6fd4e8;
+    --cyan-dim: #3c8ba3;
+    --text: #dceaf0;
+    --text-dim: #7fa0b3;
+    --amber: #e8a94f;
+    --red: #e86a6a;
+    --green: #6fcf97;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+  }
+
+  .top {
+    height: 44px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .wordmark {
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.01em;
+    color: var(--text);
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .wordmark span {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--cyan-dim);
+    letter-spacing: 0.08em;
+  }
+  .coords {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.03em;
+  }
+
+  .ribbon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .ribbon-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    border-right: 1px solid var(--line);
+  }
+  .ribbon-group:last-child { border-right: none; margin-left: auto; }
+  .ribbon-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--cyan-dim);
+    margin-right: 4px;
+  }
+
+  button {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  select, input {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    background: var(--surface-raised);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 6px 11px;
+    white-space: nowrap;
+  }
+
+  /* File/track operations: text-weight actions, not boxed - these aren't the controls
+     someone is manipulating moment to moment, so they shouldn't compete visually with
+     the tool palette. */
+  .btn-ghost {
+    background: transparent;
+    border: none;
+    color: var(--cyan-dim);
+    padding: 6px 8px;
+    border-bottom: 1px solid transparent;
+  }
+  .btn-ghost:hover { color: var(--cyan); border-bottom-color: var(--cyan-dim); }
+
+  /* The five mutually-exclusive canvas tools, rendered as one connected strip so the
+     active-tool relationship (exactly one pressed) is visible in the control's shape,
+     not just its color. */
+  .segmented {
+    display: flex;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .segmented button {
+    background: var(--surface-raised);
+    color: var(--text);
+    border: none;
+    border-right: 1px solid var(--line);
+    border-radius: 0;
+    padding: 7px 12px;
+  }
+  .segmented button:last-child { border-right: none; }
+  .segmented button:hover:not([data-active="true"]) { background: #1b3f58; }
+  .segmented button[data-active="true"] {
+    background: var(--cyan);
+    color: #0c1a26;
+    font-weight: 600;
+  }
+
+  /* An independent toggle (not mutually exclusive with the tool strip), styled like a
+     single detached segment so its on/off nature still reads as a switch. */
+  .btn-toggle {
+    background: var(--surface-raised);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 7px 12px;
+  }
+  .btn-toggle:hover { border-color: var(--line-strong); }
+  .btn-toggle[data-active="true"] {
+    background: var(--cyan);
+    color: #0c1a26;
+    border-color: var(--cyan);
+    font-weight: 600;
+  }
+
+  /* Momentary, low-stakes actions (undo/redo) - no box at all, so they read as quieter
+     than anything the user is actively selecting or committing to. */
+  .btn-icon {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    padding: 7px 8px;
+  }
+  .btn-icon:hover { color: var(--text); }
+  .btn-icon:disabled { color: #3c4f5c; cursor: default; }
+
+  /* The one commit action on the page. */
+  .btn-primary {
+    background: var(--cyan);
+    color: #0c1a26;
+    border: 1px solid var(--cyan);
+    border-radius: 2px;
+    padding: 8px 18px;
+    font-weight: 700;
+  }
+  .btn-primary:disabled {
+    background: transparent;
+    color: var(--text-dim);
+    border-color: var(--line);
+    font-weight: 600;
+    cursor: default;
+  }
+
+  .shortcut { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); margin-left: 6px; }
+  .btn-icon .shortcut, .segmented [data-active="true"] .shortcut { color: inherit; opacity: 0.7; }
+
+  .validation {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--amber);
+  }
+  .validation-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--amber);
+  }
+
+  .work {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+  .canvas-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 18px;
+    gap: 10px;
+  }
+  .hint {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+  }
+  .canvas {
+    flex: 1;
+    position: relative;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-color: #0a1620;
+    border: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .canvas svg { position: absolute; inset: 0; }
+  .readout {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--cyan-dim);
+    background: rgba(12,26,38,0.8);
+    padding: 4px 8px;
+    border: 1px solid var(--line);
+  }
+
+  .rail {
+    width: 280px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+  }
+  .panel {
+    border-bottom: 1px solid var(--line);
+    padding: 14px 16px;
+  }
+  .panel-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--cyan-dim);
+    margin-bottom: 10px;
+  }
+  .preview-box {
+    height: 150px;
+    background: #081420;
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .preview-box svg { width: 90%; }
+
+  .prop-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--line);
+  }
+  .prop-row:last-of-type { border-bottom: none; }
+  .prop-label { color: var(--text-dim); font-size: 12px; }
+  .prop-row input {
+    width: 72px;
+    text-align: right;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 4px 8px;
+  }
+  /* Destructive action: quiet until the user means it, then commits to red. */
+  .btn-danger {
+    margin-top: 10px;
+    width: 100%;
+    background: transparent;
+    color: var(--red);
+    border: 1px solid var(--red);
+    border-radius: 2px;
+    padding: 7px 12px;
+  }
+  .btn-danger:hover { background: var(--red); color: #1a0505; }
+
+  .footer {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 10px 20px;
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .meta-field { display: flex; align-items: center; gap: 8px; }
+  .meta-field label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: var(--text-dim); }
+  .meta-field input { width: 180px; }
+  .errors {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--amber);
+    margin-left: auto;
+  }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="wordmark">TRACKFORGE <span>CIRCUIT DESIGN</span></div>
+    <div class="coords">X 184.2&nbsp;&nbsp;Z -42.6&nbsp;&nbsp;ZOOM 1.40×</div>
+  </div>
+
+  <div class="ribbon">
+    <div class="ribbon-group">
+      <span class="ribbon-label">TRACK</span>
+      <select><option>Oval Speedway</option></select>
+      <input value="Oval Speedway" style="width:140px" />
+      <button class="btn-ghost">Save</button>
+      <select><option>Load saved…</option></select>
+      <button class="btn-ghost">Share</button>
+    </div>
+    <div class="ribbon-group">
+      <span class="ribbon-label">TOOLS</span>
+      <div class="segmented">
+        <button data-active="true">Select</button>
+        <button>Add point</button>
+        <button>Set start/finish</button>
+        <button>Checkpoints</button>
+        <button>Pan</button>
+      </div>
+      <button class="btn-toggle">Snap to grid</button>
+      <button class="btn-icon">Undo<span class="shortcut">⌘Z</span></button>
+      <button class="btn-icon" disabled>Redo<span class="shortcut">⌘Y</span></button>
+    </div>
+    <div class="ribbon-group">
+      <span class="ribbon-label">RACE</span>
+      <button class="btn-primary" disabled>Start Race</button>
+      <div class="validation"><span class="validation-dot"></span>2 issues to fix</div>
+      <button class="btn-ghost">Browse Tracks</button>
+    </div>
+  </div>
+
+  <div class="work">
+    <div class="canvas-pane">
+      <div class="hint">Click a control point to select it, or drag it to move it.</div>
+      <div class="canvas">
+        <svg viewBox="0 0 600 420" preserveAspectRatio="xMidYMid meet">
+          <ellipse cx="300" cy="210" rx="220" ry="140" fill="none" stroke="#6fd4e8" stroke-width="2"/>
+          <g fill="#6fd4e8" stroke="#dceaf0" stroke-width="1">
+            <rect x="294" y="64" width="12" height="12" transform="rotate(45 300 70)"/>
+            <rect x="494" y="134" width="10" height="10"/>
+            <rect x="494" y="274" width="10" height="10"/>
+            <rect x="294" y="344" width="10" height="10"/>
+            <rect x="94" y="274" width="10" height="10"/>
+            <rect x="94" y="134" width="10" height="10"/>
+          </g>
+        </svg>
+        <div class="readout">8 CONTROL POINTS, CLOSED LOOP</div>
+      </div>
+    </div>
+
+    <div class="rail">
+      <div class="panel">
+        <div class="panel-title">3D PREVIEW</div>
+        <div class="preview-box">
+          <svg viewBox="0 0 200 100">
+            <path d="M0,70 Q100,20 200,70" fill="none" stroke="#3c8ba3" stroke-width="18" stroke-dasharray="2 10" opacity="0.5"/>
+            <path d="M0,70 Q100,20 200,70" fill="none" stroke="#dceaf0" stroke-width="1" opacity="0.5" stroke-dasharray="6 6"/>
+          </svg>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">CONTROL POINT 03</div>
+        <div class="prop-row"><span class="prop-label">Width</span><input value="14.0" /></div>
+        <div class="prop-row"><span class="prop-label">Elevation</span><input value="0.0" /></div>
+        <div class="prop-row"><span class="prop-label">Banking</span><input value="8.0" /></div>
+        <button class="btn-danger">Delete point<span class="shortcut">DEL</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="meta-field"><label>AUTHOR</label><input placeholder="—" /></div>
+    <div class="meta-field"><label>DESCRIPTION</label><input value="A fast, wide oval." style="width:260px" /></div>
+    <div class="errors">⚠ Start/finish line not set&nbsp;&nbsp;&nbsp;⚠ Corner 4 is below the minimum radius</div>
+  </div>
+</body>
+</html>

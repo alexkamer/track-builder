@@ -1,13 +1,52 @@
 :root {
-  --panel-bg: rgba(16, 20, 24, 0.85);
-  --panel-border: rgba(255, 255, 255, 0.1);
-  --accent: #ef9b0f;
-  --accent-text: #1a1203;
-  --text-primary: #e6e6e6;
-  --text-muted: #9aa0a6;
-  --radius-md: 6px;
+  /* Surfaces - near-black console with a raised/recessed bezel pair rather than one flat panel tone */
+  --color-bg: #0a0a0b;
+  --color-surface: #141416;
+  --color-surface-raised: #1c1c1f;
+  --color-surface-recessed: #060607;
+  --color-surface-overlay: rgba(10, 10, 11, 0.85);
+  --color-border: #050506;
+  --color-border-hi: #2a2a2e;
+  --color-border-strong: #28282b;
+
+  /* Text */
+  --color-text-primary: #e8e8ea;
+  --color-text-muted: #8c8c92;
+  --color-text-faint: #5c5c62;
+  --color-text-on-accent: #1a1204;
+
+  /* Accent / state - amber is the brand accent; green/red are reserved as real status signals */
+  --color-accent: #f5a623;
+  --color-accent-hover: #ffb84d;
+  --color-danger: #e5484d;
+  --color-success: #27c972;
+
+  /* Radius */
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 10px;
+
+  /* Spacing */
+  --space-2xs: 4px;
+  --space-xs: 6px;
   --space-sm: 8px;
   --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Type */
+  --font-sans: 'Titillium Web', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-lg: 18px;
+  --text-xl: 24px;
+  --text-2xl: 28px;
+  --text-display: 96px;
+
+  /* Layout */
+  --header-height: 48px;
 }
 
 .app-shell {
@@ -16,14 +55,248 @@
   align-items: center;
   gap: 12px;
   padding: 24px;
-  color: var(--text-primary);
-  background: #0b0d10;
+  color: var(--color-text-primary);
+  background: var(--color-bg);
   min-height: 100vh;
 }
 
 .app-shell h1 {
-  color: #e6e6e6;
+  color: var(--color-text-primary);
 }
+
+/* -------------------------------------------------------------------------
+ * Shared role-based controls (buttons, fields, panels)
+ * ---------------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-top-color: var(--color-border-hi);
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  font-size: var(--text-base);
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 100ms, border-color 100ms;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+}
+
+.btn:disabled {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  border-color: var(--color-accent);
+}
+
+/* The one filled "affirmative" action style (e.g. confirming a rename). Kept distinct
+   from .btn--go below: this is a brand-colored commit, not a race-readiness signal. */
+.btn--primary {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  border-color: var(--color-accent);
+  font-weight: 700;
+}
+
+.btn--primary:disabled {
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  font-weight: normal;
+  opacity: 1;
+}
+
+/* Start Race: the console's one true status light. Flat and grey until the track is
+   actually raceable, then green with a glow - color used as a signal, not decoration. */
+.btn--go {
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  border-top-color: var(--color-border-hi);
+  font-weight: 700;
+  padding: 8px 20px;
+}
+
+.btn--go:not(:disabled) {
+  background: var(--color-success);
+  color: #04140a;
+  border-color: #1a9d58;
+  box-shadow: 0 0 10px rgba(39, 201, 114, 0.45);
+}
+
+.btn--go:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.btn--ghost {
+  background: transparent;
+}
+
+/* Secondary, occasional actions (save/share/browse) sit flush rather than raised off
+   the console, so they read as lower-weight than the tools you're actively operating. */
+.btn--flat {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.btn--flat:hover:not(:disabled) {
+  color: var(--color-text-primary);
+  border-color: var(--color-border-strong);
+}
+
+.btn--flat:disabled {
+  background: transparent;
+  border-color: transparent;
+}
+
+/* Momentary pushbuttons (undo/redo) - the lightest-weight control on the page, since
+   they don't set any state, just trigger a one-off action. */
+.btn--momentary {
+  background: var(--color-bg);
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.btn--momentary:hover:not(:disabled) {
+  color: var(--color-text-primary);
+}
+
+.btn--momentary:disabled {
+  color: var(--color-text-faint);
+  opacity: 1;
+}
+
+/* Destructive action: quiet outline until the user means it, then commits to red. */
+.btn--danger {
+  background: transparent;
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: var(--color-danger);
+  color: #1a0506;
+}
+
+/* The five mutually-exclusive canvas tools, rendered as one connected bank of switches
+   so "exactly one is active" is a shape, not just a color - the active segment also
+   sits visually "pressed" via an inset shadow, like a real toggle switch. */
+.switches {
+  display: inline-flex;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.switches button {
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  border: none;
+  border-right: 1px solid var(--color-border);
+  border-radius: 0;
+  padding: 6px 12px;
+  font-size: var(--text-base);
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.switches button:last-child {
+  border-right: none;
+}
+
+.switches button:hover:not([aria-pressed='true']) {
+  background: #242428;
+}
+
+.switches button[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.35);
+}
+
+/* An independent toggle (not mutually exclusive with the switch bank), styled as a
+   single detached switch so it still reads as on/off rather than a momentary push. */
+.btn--switch {
+  border-top-color: var(--color-border-hi);
+}
+
+.btn--switch[aria-pressed='true'] {
+  border-color: #c6850f;
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.35);
+}
+
+.btn-shortcut {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--color-text-faint);
+  opacity: 1;
+}
+
+.btn[aria-pressed='true'] .btn-shortcut,
+.switches [aria-pressed='true'] .btn-shortcut,
+.btn--go:not(:disabled) .btn-shortcut {
+  color: inherit;
+  opacity: 0.75;
+}
+
+/* Applied directly to an <input>/<select>/<textarea>. For a labeled group, wrap the
+   label and the field-classed control together rather than putting .field on a container. */
+.field {
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-top-color: var(--color-border-hi);
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  font-size: var(--text-base);
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.field:disabled {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.field-label {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  gap: 2px;
+}
+
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top-color: var(--color-border-hi);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+/* -------------------------------------------------------------------------
+ * Toolbar layout (controls inside carry their own .btn/.field role classes)
+ * ---------------------------------------------------------------------- */
 
 .toolbar {
   display: flex;
@@ -37,81 +310,323 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-sm);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--panel-border);
+  padding: var(--space-sm) var(--space-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top-color: var(--color-border-hi);
   border-radius: var(--radius-md);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
-.toolbar button,
-.toolbar select,
-.toolbar input {
-  background: #1a1f26;
-  color: var(--text-primary);
-  border: 1px solid var(--panel-border);
-  border-radius: var(--radius-md);
-  padding: 6px 10px;
-  font-size: 14px;
+.toolbar-group-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  margin-right: var(--space-2xs);
 }
 
-.toolbar button:disabled,
-.toolbar select:disabled {
-  color: var(--text-muted);
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+/* -------------------------------------------------------------------------
+ * Editor application shell
+ * ---------------------------------------------------------------------- */
 
-.toolbar-group--tools button[aria-pressed='true'] {
-  background: var(--accent);
-  color: var(--accent-text);
-  border-color: var(--accent);
-}
-
-.button-primary {
-  background: var(--accent);
-  color: var(--accent-text);
-  border-color: var(--accent);
-  font-weight: 600;
-}
-
-.button-primary:disabled {
-  background: #1a1f26;
-  color: var(--text-muted);
-  border-color: var(--panel-border);
-  font-weight: normal;
-}
-
-.editor-panels {
+.editor-shell {
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  overflow: hidden;
+}
+
+.editor-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--header-height);
+  padding: 0 var(--space-lg);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+.editor-header h1 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}
+
+.editor-toolbar-region {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+.editor-work-area {
+  flex: 1;
+  display: flex;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  overflow: auto;
   align-items: flex-start;
+  justify-content: center;
+}
+
+.work-area-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.canvas-hint {
+  min-height: 18px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  padding: var(--space-2xs) var(--space-sm);
+}
+
+.canvas-frame {
+  position: relative;
+  display: inline-block;
+}
+
+.canvas-readouts {
+  position: absolute;
+  left: var(--space-sm);
+  bottom: var(--space-sm);
+  display: flex;
+  gap: var(--space-2xs);
+  pointer-events: none;
+}
+
+.readout-chip {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  background: rgba(6, 6, 7, 0.8);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+}
+
+.side-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  flex-shrink: 0;
+  width: 260px;
+}
+
+.editor-status-region {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  border-top: 1px solid var(--color-border-strong);
+  max-height: 160px;
+  overflow: auto;
+}
+
+/* -------------------------------------------------------------------------
+ * Race-gate validation summary (next to Start Race)
+ * ---------------------------------------------------------------------- */
+
+.race-gate {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.validation-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}
+
+.validation-summary-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+/* -------------------------------------------------------------------------
+ * Share URL field
+ * ---------------------------------------------------------------------- */
+
+.share-field {
+  max-width: 420px;
+}
+
+.share-field-row {
+  display: flex;
+  gap: var(--space-2xs);
+}
+
+.share-field-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.copy-feedback {
+  font-size: var(--text-xs);
+  color: var(--color-success);
+}
+
+.copy-feedback--error {
+  color: var(--color-danger);
+}
+
+/* -------------------------------------------------------------------------
+ * Track metadata panel / control point inspector
+ * ---------------------------------------------------------------------- */
+
+.metadata-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
 }
 
 .inspector {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-width: 200px;
-  flex-shrink: 0;
-  color: #e6e6e6;
+  gap: var(--space-sm);
+  color: var(--color-text-primary);
 }
 
-.inspector input {
+.panel-title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+}
+
+.inspector h3 {
+  margin: 0 0 var(--space-xs);
+}
+
+.inspector .field {
   width: 100%;
   box-sizing: border-box;
 }
 
-.inspector label {
+.panel-head {
   display: flex;
-  flex-direction: column;
-  font-size: 13px;
-  gap: 2px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
 }
+
+.live-tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  color: var(--color-danger);
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-danger);
+  animation: live-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(229, 72, 77, 0.6); }
+  50% { box-shadow: 0 0 0 4px rgba(229, 72, 77, 0); }
+}
+
+.viewfinder {
+  position: relative;
+}
+
+.preview-surface {
+  background: var(--color-surface-recessed);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-surface p {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  padding: var(--space-md);
+  text-align: center;
+  margin: 0;
+}
+
+.bracket {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--color-accent);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.bracket.tl { top: 5px; left: 5px; border-right: none; border-bottom: none; }
+.bracket.tr { top: 5px; right: 5px; border-left: none; border-bottom: none; }
+.bracket.bl { bottom: 5px; left: 5px; border-right: none; border-top: none; }
+.bracket.br { bottom: 5px; right: 5px; border-left: none; border-top: none; }
+
+.preview-caption {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.preview-caption strong {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+/* -------------------------------------------------------------------------
+ * Race HUD
+ * ---------------------------------------------------------------------- */
 
 .race-shell {
   position: relative;
   padding: 0;
   gap: 0;
+}
+
+.race-top-bar {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-md);
+  border-bottom: 1px solid var(--color-border-strong);
+  background: var(--color-bg);
 }
 
 .race-shell canvas {
@@ -127,11 +642,11 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-family: ui-monospace, monospace;
-  font-size: 18px;
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
   color: #fff;
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
+  background: var(--color-surface-overlay);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   padding: var(--space-sm) var(--space-md);
 }
@@ -144,36 +659,36 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
+  background: var(--color-surface-overlay);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   padding: var(--space-sm) var(--space-md);
   color: #fff;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   min-width: 160px;
 }
 
 .stats-speed {
-  font-size: 28px;
+  font-size: var(--text-2xl);
   font-weight: 700;
 }
 
 .stats-speed small {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 400;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 .stats-pedal {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 .stats-pedal span {
   width: 42px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 .stats-pedal-track {
@@ -191,16 +706,17 @@
 }
 
 .stats-pedal-fill--throttle {
-  background: #4caf50;
+  background: var(--color-success);
 }
 
 .stats-pedal-fill--brake {
-  background: #ef476f;
+  background: var(--color-danger);
 }
 
 .validation-errors {
-  color: #ef476f;
+  color: var(--color-danger);
   max-width: 640px;
+  font-size: var(--text-sm);
 }
 
 .camera-toggle,
@@ -208,12 +724,12 @@
   position: absolute;
   right: 16px;
   z-index: 10;
-  background: var(--panel-bg);
+  background: var(--color-surface-overlay);
   color: #fff;
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 6px 10px;
-  font-size: 14px;
+  font-size: var(--text-base);
 }
 
 .camera-toggle {
@@ -230,8 +746,8 @@
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 20;
-  font-family: ui-monospace, monospace;
-  font-size: 96px;
+  font-family: var(--font-mono);
+  font-size: var(--text-display);
   font-weight: bold;
   color: #fff;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
@@ -243,13 +759,13 @@
   top: 148px;
   right: 16px;
   z-index: 10;
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
+  background: var(--color-surface-overlay);
+  border: 1px solid var(--color-border-strong);
   color: #fff;
   padding: 12px;
   border-radius: var(--radius-md);
   max-width: 260px;
-  font-size: 14px;
+  font-size: var(--text-base);
 }
 
 .leaderboard-submit {
@@ -262,4 +778,57 @@
 .leaderboard-list {
   margin: 0;
   padding-left: 20px;
+}
+
+/* -------------------------------------------------------------------------
+ * Track browser
+ * ---------------------------------------------------------------------- */
+
+.track-browser {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  color: var(--color-text-primary);
+  width: 100%;
+  max-width: 640px;
+}
+
+.track-browser h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.track-browser-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.track-browser-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+}
+
+.track-browser-row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-browser-row-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
 }
