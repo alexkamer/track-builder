@@ -68,8 +68,8 @@ export function ControlPointInspector({
           className="field"
           data-testid="point-banking-input"
           value={point.bankingDeg}
-          min={-45}
-          max={45}
+          min={-60}
+          max={60}
           step={1}
           onChange={(e) =>
             dispatch({

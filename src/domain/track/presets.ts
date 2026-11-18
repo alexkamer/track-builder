@@ -127,10 +127,66 @@ function hairpinAlley(): TrackDocument {
   })
 }
 
+function streetGrandPrix(): TrackDocument {
+  const width = 12
+  // A tight hairpin genuinely pushes the car's minimum turning radius, which only became
+  // possible once the car's steering authority (baseTurnRate) was tuned up alongside its top
+  // speed - this exact shape would have failed CORNER_RADIUS_TOO_TIGHT validation before that.
+  const controlPoints = [
+    createControlPoint({ x: 0, z: 0, width }),
+    createControlPoint({ x: 320, z: -20, width }),
+    createControlPoint({ x: 420, z: -100, width, elevation: 4, bankingDeg: 5 }),
+    createControlPoint({ x: 440, z: -280, width }),
+    createControlPoint({ x: 500, z: -360, width }),
+    createControlPoint({ x: 430, z: -440, width }),
+    createControlPoint({ x: 340, z: -360, width }),
+    createControlPoint({ x: 100, z: -200, width }),
+    createControlPoint({ x: -80, z: -120, width, elevation: 3, bankingDeg: -5 }),
+  ]
+  return createTrackDocument({
+    id: 'preset-street-grand-prix',
+    name: 'Street Grand Prix',
+    controlPoints,
+    startLine: { controlPointIndex: START_INDEX, headingDeg: tangentHeadingDeg(controlPoints, START_INDEX) },
+    metadata: { description: 'A fast sweeping opener into a genuinely tight hairpin, home via a banked street corner.' },
+  })
+}
+
+function apexRaceway(): TrackDocument {
+  const width = 12
+  // A fast banked opening sweeper into a flowing esses sequence, a tight low-speed scallop
+  // corner, and a banked final turn - a second, differently-shaped demonstration of the
+  // loosened corner-radius limit (minimum radius here is ~19 units, versus the old ~25.5
+  // minimum that forced every corner into a wide sweep).
+  const controlPoints = [
+    createControlPoint({ x: 0, z: 0, width }),
+    createControlPoint({ x: 340, z: 10, width }),
+    createControlPoint({ x: 450, z: 110, width, elevation: 5, bankingDeg: 8 }),
+    createControlPoint({ x: 470, z: 260, width }),
+    createControlPoint({ x: 360, z: 330, width }),
+    createControlPoint({ x: 420, z: 460, width }),
+    createControlPoint({ x: 300, z: 560, width }),
+    createControlPoint({ x: 140, z: 560, width }),
+    createControlPoint({ x: 60, z: 460, width }),
+    createControlPoint({ x: 120, z: 360, width }),
+    createControlPoint({ x: -40, z: 220, width, elevation: 2, bankingDeg: -8 }),
+    createControlPoint({ x: -30, z: 80, width }),
+  ]
+  return createTrackDocument({
+    id: 'preset-apex-raceway',
+    name: 'Apex Raceway',
+    controlPoints,
+    startLine: { controlPointIndex: START_INDEX, headingDeg: tangentHeadingDeg(controlPoints, START_INDEX) },
+    metadata: { description: 'A banked opening sweeper into flowing esses, a tight scallop corner, and a banked final turn.' },
+  })
+}
+
 export const PRESET_TRACKS: TrackDocument[] = [
   ovalSpeedway(),
   serpentineCircuit(),
   grandLoop(),
   deltaCircuit(),
+  streetGrandPrix(),
   hairpinAlley(),
+  apexRaceway(),
 ]
