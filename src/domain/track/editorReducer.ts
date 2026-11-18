@@ -1,5 +1,6 @@
 import type { Checkpoint, ControlPoint, StartLine, TrackDocument, TrackMetadata } from './schema'
 import { createTrackDocument } from './schema'
+import { tangentHeadingDeg } from './heading'
 
 export type EditorAction =
   | { type: 'ADD_POINT'; point: ControlPoint; insertIndex?: number }
@@ -84,7 +85,11 @@ export function editorReducer(doc: TrackDocument, action: EditorAction): TrackDo
         ...doc,
         startLine: {
           controlPointIndex: action.controlPointIndex,
-          headingDeg: action.headingDeg ?? doc.startLine.headingDeg,
+          // Default to the curve's actual direction of travel at this point, not whichever
+          // heading happened to be stored before (typically 0, the schema default, which is
+          // only right by coincidence) - the car otherwise spawns facing however the track
+          // happened to be oriented when a different point was last the start line.
+          headingDeg: action.headingDeg ?? tangentHeadingDeg(doc.controlPoints, action.controlPointIndex),
         },
         // a control point can't be both the start line and a checkpoint
         checkpoints: doc.checkpoints.filter(
