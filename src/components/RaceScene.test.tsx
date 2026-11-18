@@ -55,4 +55,21 @@ describe('RaceScene', () => {
     expect(screen.getByTestId('race-hud')).toBeInTheDocument()
     generateTrackSpy.mockRestore()
   })
+
+  it('renders the stats HUD at a standstill with zeroed speed, throttle, and brake', () => {
+    render(<RaceScene doc={squareTrack()} />)
+
+    expect(screen.getByTestId('stats-hud')).toBeInTheDocument()
+    expect(screen.getByTestId('speed-display')).toHaveTextContent('0')
+    expect(screen.getByTestId('elevation-display')).toHaveTextContent('Elevation: 0.0m')
+  })
+
+  it('restart resets the stats HUD back to zero', () => {
+    render(<RaceScene doc={squareTrack()} />)
+
+    fireEvent.click(screen.getByTestId('restart-button'))
+
+    expect(screen.getByTestId('speed-display')).toHaveTextContent('0')
+    expect(screen.getByTestId('elevation-display')).toHaveTextContent('Elevation: 0.0m')
+  })
 })

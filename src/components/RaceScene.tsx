@@ -5,7 +5,9 @@ import { generateTrack } from '../domain/generation/generateTrack'
 import { useKeyboardCarInput } from '../hooks/useKeyboardCarInput'
 import { useRaceSession } from '../hooks/useRaceSession'
 import { useRestartKey } from '../hooks/useRestartKey'
-import { createInitialCarState, type CarState } from '../domain/physics/carPhysics'
+import { createInitialCarState, type CarInput, type CarState } from '../domain/physics/carPhysics'
+import { unitsPerSecondToMph } from '../domain/physics/units'
+import { elevationAt } from '../domain/physics/trackSurface'
 import {
   createCountdownState,
   formatCountdownPhase,
@@ -20,6 +22,17 @@ import { ChaseCamera } from './ChaseCamera'
 import { TopDownCamera } from './TopDownCamera'
 import { TrackScenery } from './TrackScenery'
 import { LeaderboardPanel } from './LeaderboardPanel'
+
+interface LiveStats {
+  mph: number
+  elevation: number
+  throttle: number
+  brake: number
+}
+
+const INITIAL_STATS: LiveStats = { mph: 0, elevation: 0, throttle: 0, brake: 0 }
+/** How often (in fixed ticks) the stats HUD re-renders - matches the lap-timer display's throttling so this doesn't add its own re-render churn. */
+const STATS_UPDATE_EVERY_N_TICKS = 6
 
 interface RaceSceneProps {
   doc: TrackDocument
@@ -59,10 +72,28 @@ export function RaceScene({ doc, trackId = null }: RaceSceneProps) {
     createInitialCarState(generated.spawn.position.x, generated.spawn.position.z, startHeadingRad),
   )
 
-  const { liveLapSeconds, lastLapSeconds, bestLapSeconds, ghostInputLog, handleTick, resetAttempt } = useRaceSession(
-    doc,
-    generated,
-  )
+  const {
+    liveLapSeconds,
+    lastLapSeconds,
+    bestLapSeconds,
+    ghostInputLog,
+    handleTick: sessionHandleTick,
+    resetAttempt,
+  } = useRaceSession(doc, generated)
+
+  const [liveStats, setLiveStats] = useState<LiveStats>(INITIAL_STATS)
+
+  const handleTick = (state: CarState, tickIndex: number, input: CarInput) => {
+    sessionHandleTick(state, tickIndex, input)
+    if (tickIndex % STATS_UPDATE_EVERY_N_TICKS === 0) {
+      setLiveStats({
+        mph: unitsPerSecondToMph(state.speed),
+        elevation: elevationAt(state, generated),
+        throttle: input.throttle,
+        brake: input.brake,
+      })
+    }
+  }
 
   const controllable = isControllable(countdown.phase)
 
@@ -70,6 +101,7 @@ export function RaceScene({ doc, trackId = null }: RaceSceneProps) {
     carStateRef.current = createInitialCarState(generated.spawn.position.x, generated.spawn.position.z, startHeadingRad)
     setResetToken((t) => t + 1)
     resetAttempt()
+    setLiveStats(INITIAL_STATS)
     setCountdown(createCountdownState())
   }
 
@@ -85,6 +117,30 @@ export function RaceScene({ doc, trackId = null }: RaceSceneProps) {
         <span data-testid="best-lap-time">
           Best lap: {bestLapSeconds !== null ? formatLapTime(bestLapSeconds) : '--:--'}
         </span>
+      </div>
+      <div className="stats-hud" data-testid="stats-hud">
+        <span className="stats-speed" data-testid="speed-display">
+          {Math.round(liveStats.mph)} <small>mph</small>
+        </span>
+        <span data-testid="elevation-display">Elevation: {liveStats.elevation.toFixed(1)}m</span>
+        <div className="stats-pedal" data-testid="throttle-stat">
+          <span>Accel</span>
+          <div className="stats-pedal-track">
+            <div
+              className="stats-pedal-fill stats-pedal-fill--throttle"
+              style={{ width: `${Math.round(liveStats.throttle * 100)}%` }}
+            />
+          </div>
+        </div>
+        <div className="stats-pedal" data-testid="brake-stat">
+          <span>Brake</span>
+          <div className="stats-pedal-track">
+            <div
+              className="stats-pedal-fill stats-pedal-fill--brake"
+              style={{ width: `${Math.round(liveStats.brake * 100)}%` }}
+            />
+          </div>
+        </div>
       </div>
       <button
         type="button"
