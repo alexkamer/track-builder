@@ -88,7 +88,9 @@ describe('generateTrack', () => {
     const flat = validSquareTrack()
     const banked = createTrackDocument({
       ...flat,
-      controlPoints: flat.controlPoints.map((p, i) => (i === 0 ? { ...p, bankingDeg: 30 } : p)),
+      // Elevated enough that banking doesn't tilt an edge below ground (see
+      // validateGroundClearance): halfWidth 5 * sin(30deg) = 2.5 units of tilt.
+      controlPoints: flat.controlPoints.map((p, i) => (i === 0 ? { ...p, elevation: 10, bankingDeg: 30 } : p)),
     })
 
     const flatMesh = generateTrack(flat).roadMesh

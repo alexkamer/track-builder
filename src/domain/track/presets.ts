@@ -88,7 +88,10 @@ function deltaCircuit(): TrackDocument {
     createControlPoint({ x: -60, z: -230, width, elevation: 18 }),
     createControlPoint({ x: -150, z: -140, width, elevation: 10 }),
     createControlPoint({ x: -220, z: -10, width, elevation: 4, bankingDeg: -8 }),
-    createControlPoint({ x: -230, z: 100, width, elevation: 0, bankingDeg: -8 }),
+    // Banking eases back to flat by the time the road returns to ground level, rather than
+    // staying banked at elevation 0 - which would tilt one edge of the road below ground
+    // (see validateGroundClearance).
+    createControlPoint({ x: -230, z: 100, width, elevation: 0 }),
   ]
   return createTrackDocument({
     id: 'preset-delta-circuit',

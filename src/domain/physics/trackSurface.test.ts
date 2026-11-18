@@ -28,12 +28,15 @@ function hillyTrack() {
 }
 
 function bankedTrack() {
+  // Elevated well clear of the ground everywhere: banking tilts each edge up/down by
+  // sin(bankingDeg) * halfWidth from this elevation (see validateGroundClearance), and a
+  // bank at or near elevation 0 would fail validation by putting one edge underground.
   return createTrackDocument({
     controlPoints: [
-      createControlPoint({ x: 0, z: 0, width: 20, bankingDeg: 0 }),
-      createControlPoint({ x: 200, z: 0, width: 20, bankingDeg: 30 }),
-      createControlPoint({ x: 200, z: 200, width: 20, bankingDeg: 0 }),
-      createControlPoint({ x: 0, z: 200, width: 20, bankingDeg: 0 }),
+      createControlPoint({ x: 0, z: 0, width: 20, elevation: 20, bankingDeg: 0 }),
+      createControlPoint({ x: 200, z: 0, width: 20, elevation: 20, bankingDeg: 30 }),
+      createControlPoint({ x: 200, z: 200, width: 20, elevation: 20, bankingDeg: 0 }),
+      createControlPoint({ x: 0, z: 200, width: 20, elevation: 20, bankingDeg: 0 }),
     ],
     startLine: { controlPointIndex: 0, headingDeg: 90 },
   })

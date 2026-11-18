@@ -1,6 +1,6 @@
 import type { TrackDocument } from './schema'
 import { UNSET_START_LINE } from './schema'
-import { sampleClosedCatmullRom } from './spline'
+import { sampleClosedCatmullRom, sampleClosedScalar } from './spline'
 import { achievableTurnRadius } from '../physics/carPhysics'
 
 export const MIN_CONTROL_POINTS = 3
@@ -19,6 +19,7 @@ export type ValidationErrorCode =
   | 'CLOSED_LOOP_TOO_FEW_POINTS'
   | 'SELF_INTERSECTION'
   | 'CORNER_RADIUS_TOO_TIGHT'
+  | 'ROAD_BELOW_GROUND'
   | 'START_LINE_MISSING'
 
 export interface ValidationError {
@@ -151,6 +152,43 @@ export function validateCornerRadius(doc: TrackDocument): ValidationError | null
   return null
 }
 
+/**
+ * `generateTrack`'s `offsetAt` tilts each edge of a banked ring up/down by
+ * `sin(bankingRad) * halfWidth` from the centerline's own elevation - that's what banking
+ * *is*, geometrically. Wherever a nonzero bank angle lands at low enough elevation, the
+ * banked-down edge's height goes negative: the paved surface dips below ground level rather
+ * than sitting on top of it. This happens easily by accident - banking placed at or near an
+ * elevation-0 control point, or a banked and a flat control point adjacent to each other so
+ * the stretch between them carries banking across elevation 0 - and looks like the track
+ * sinking into the terrain.
+ */
+export function validateGroundClearance(doc: TrackDocument): ValidationError | null {
+  if (doc.controlPoints.length < MIN_CONTROL_POINTS) return null // closed-loop check owns this case
+
+  const centerline = sampleClosedCatmullRom(
+    doc.controlPoints.map((p) => ({ x: p.x, y: p.elevation, z: p.z })),
+    VALIDATION_SAMPLES_PER_SEGMENT,
+  )
+  const widths = sampleClosedScalar(doc.controlPoints.map((p) => p.width), VALIDATION_SAMPLES_PER_SEGMENT)
+  const bankingsDeg = sampleClosedScalar(doc.controlPoints.map((p) => p.bankingDeg), VALIDATION_SAMPLES_PER_SEGMENT)
+
+  for (let i = 0; i < centerline.length; i++) {
+    const halfWidth = widths[i] / 2
+    const bankingRad = (bankingsDeg[i] * Math.PI) / 180
+    // Whichever edge banking tilts downward - the formula is symmetric in sign, so this is
+    // always the lower of the two regardless of which way the road is banked.
+    const lowEdgeElevation = centerline[i].y - Math.abs(Math.sin(bankingRad)) * halfWidth
+    if (lowEdgeElevation < 0) {
+      const controlPointIndex = Math.floor(i / VALIDATION_SAMPLES_PER_SEGMENT) % doc.controlPoints.length
+      return {
+        code: 'ROAD_BELOW_GROUND',
+        message: `The road surface dips ${(-lowEdgeElevation).toFixed(1)} units below ground level near control point ${controlPointIndex} (${centerline[i].x.toFixed(1)}, ${centerline[i].z.toFixed(1)}). Raise the elevation there, or reduce the banking.`,
+      }
+    }
+  }
+  return null
+}
+
 /** Minimal validation for the vertical slice: closed loop + start line only. */
 export function validateTrackMinimal(doc: TrackDocument): ValidationError[] {
   return [validateClosedLoop(doc), validateStartLine(doc)].filter(
@@ -164,6 +202,7 @@ export function validateTrack(doc: TrackDocument): ValidationError[] {
     validateClosedLoop(doc),
     validateSelfIntersection(doc),
     validateCornerRadius(doc),
+    validateGroundClearance(doc),
     validateStartLine(doc),
   ].filter((e): e is ValidationError => e !== null)
 }
