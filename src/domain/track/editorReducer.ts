@@ -2,7 +2,7 @@ import type { Checkpoint, ControlPoint, StartLine, TrackDocument, TrackMetadata 
 import { createTrackDocument } from './schema'
 
 export type EditorAction =
-  | { type: 'ADD_POINT'; point: ControlPoint }
+  | { type: 'ADD_POINT'; point: ControlPoint; insertIndex?: number }
   | { type: 'MOVE_POINT'; index: number; x: number; z: number }
   | { type: 'DELETE_POINT'; index: number }
   | { type: 'SET_POINT_WIDTH'; index: number; width: number }
@@ -16,8 +16,25 @@ export type EditorAction =
 
 export function editorReducer(doc: TrackDocument, action: EditorAction): TrackDocument {
   switch (action.type) {
-    case 'ADD_POINT':
-      return { ...doc, controlPoints: [...doc.controlPoints, action.point] }
+    case 'ADD_POINT': {
+      // Defaults to appending (the array-end "insert index"), so the loop's start-line/
+      // checkpoint indices - which only need shifting for points inserted before them -
+      // never need reindexing in that default case.
+      const insertIndex = action.insertIndex ?? doc.controlPoints.length
+      const controlPoints = [
+        ...doc.controlPoints.slice(0, insertIndex),
+        action.point,
+        ...doc.controlPoints.slice(insertIndex),
+      ]
+      return {
+        ...doc,
+        controlPoints,
+        startLine: reindexAfterInsert(doc.startLine, insertIndex),
+        checkpoints: doc.checkpoints.map((c) => ({
+          controlPointIndex: shiftIndexAfterInsert(c.controlPointIndex, insertIndex),
+        })),
+      }
+    }
 
     case 'MOVE_POINT': {
       const controlPoints = doc.controlPoints.map((p, i) =>
@@ -118,6 +135,17 @@ function reindexAfterDelete(startLine: StartLine, deletedIndex: number): StartLi
   return {
     ...startLine,
     controlPointIndex: shiftIndexAfterDelete(startLine.controlPointIndex, deletedIndex),
+  }
+}
+
+function shiftIndexAfterInsert(index: number, insertIndex: number): number {
+  return index >= insertIndex ? index + 1 : index
+}
+
+function reindexAfterInsert(startLine: StartLine, insertIndex: number): StartLine {
+  return {
+    ...startLine,
+    controlPointIndex: shiftIndexAfterInsert(startLine.controlPointIndex, insertIndex),
   }
 }
 

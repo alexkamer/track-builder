@@ -166,6 +166,22 @@ function App() {
           </button>
         </div>
         <div className="toolbar-group toolbar-group--tools">
+          <button
+            type="button"
+            data-testid="select-tool-button"
+            aria-pressed={toolMode === 'select'}
+            onClick={() => setToolMode('select')}
+          >
+            Select
+          </button>
+          <button
+            type="button"
+            data-testid="add-point-tool-button"
+            aria-pressed={toolMode === 'add-point'}
+            onClick={() => setToolMode((m) => (m === 'add-point' ? 'select' : 'add-point'))}
+          >
+            {toolMode === 'add-point' ? 'Click to add a point…' : 'Add point'}
+          </button>
           <button type="button" data-testid="undo-button" disabled={!canUndo} onClick={undo}>
             Undo
           </button>

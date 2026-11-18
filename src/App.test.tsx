@@ -12,9 +12,9 @@ describe('App race-mode gating', () => {
     render(<App />)
     const canvas = screen.getByTestId('track-editor-canvas')
 
-    // Place 3 control points by clicking directly on the canvas background, spaced
-    // widely enough to clear the minimum corner radius check (now calibrated against
-    // the car's actual achievable turn radius, so this needs to be bigger than before).
+    // Place 3 control points with the Add Point tool, spaced widely enough to clear the
+    // minimum corner radius check (calibrated against the car's actual achievable turn radius).
+    fireEvent.click(screen.getByTestId('add-point-tool-button'))
     fireEvent.click(canvas, { clientX: 0, clientY: 0, target: canvas })
     fireEvent.click(canvas, { clientX: 450, clientY: 0, target: canvas })
     fireEvent.click(canvas, { clientX: 225, clientY: 450, target: canvas })
@@ -29,17 +29,23 @@ describe('App race-mode gating', () => {
 })
 
 describe('App delete control point', () => {
-  it('clears selection after deleting the selected (last) control point', () => {
+  it('clears selection after deleting the selected point', () => {
     render(<App />)
     const canvas = screen.getByTestId('track-editor-canvas')
 
+    fireEvent.click(screen.getByTestId('add-point-tool-button'))
     fireEvent.click(canvas, { clientX: 0, clientY: 0, target: canvas })
     fireEvent.click(canvas, { clientX: 300, clientY: 0, target: canvas })
     fireEvent.click(canvas, { clientX: 150, clientY: 300, target: canvas })
     fireEvent.click(canvas, { clientX: 150, clientY: 100, target: canvas })
 
-    fireEvent.mouseDown(screen.getByTestId('control-point-3'))
-    expect(screen.getByText('Control point 3')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('select-tool-button'))
+    // The Add Point tool inserts each new point at its nearest position along the loop
+    // rather than always at the end, so select whichever point testid is actually present
+    // instead of assuming click order matches array order.
+    const [firstPoint] = screen.getAllByTestId(/^control-point-\d+$/)
+    fireEvent.mouseDown(firstPoint)
+    expect(screen.getByText(/Control point \d/)).toBeInTheDocument()
 
     fireEvent.click(screen.getByTestId('delete-point-button'))
 
@@ -81,6 +87,7 @@ describe('App browse mode', () => {
     )
     render(<App />)
     const canvas = screen.getByTestId('track-editor-canvas')
+    fireEvent.click(screen.getByTestId('add-point-tool-button'))
     fireEvent.click(canvas, { clientX: 0, clientY: 0, target: canvas })
     fireEvent.click(canvas, { clientX: 300, clientY: 0, target: canvas })
 

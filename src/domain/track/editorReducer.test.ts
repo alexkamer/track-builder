@@ -10,6 +10,64 @@ describe('editorReducer', () => {
     expect(next.controlPoints[0]).toMatchObject({ x: 5, z: 5 })
   })
 
+  it('appends at the end when insertIndex is omitted', () => {
+    const doc = createTrackDocument({
+      controlPoints: [createControlPoint({ x: 0, z: 0 }), createControlPoint({ x: 1, z: 1 })],
+    })
+    const next = editorReducer(doc, { type: 'ADD_POINT', point: createControlPoint({ x: 9, z: 9 }) })
+    expect(next.controlPoints.map((p) => p.x)).toEqual([0, 1, 9])
+  })
+
+  it('inserts at a specific index, shifting later points', () => {
+    const doc = createTrackDocument({
+      controlPoints: [createControlPoint({ x: 0, z: 0 }), createControlPoint({ x: 2, z: 2 })],
+    })
+    const next = editorReducer(doc, {
+      type: 'ADD_POINT',
+      point: createControlPoint({ x: 1, z: 1 }),
+      insertIndex: 1,
+    })
+    expect(next.controlPoints.map((p) => p.x)).toEqual([0, 1, 2])
+  })
+
+  it('shifts the start line and checkpoint indices for points inserted before them', () => {
+    const doc = createTrackDocument({
+      controlPoints: [
+        createControlPoint({ x: 0, z: 0 }),
+        createControlPoint({ x: 1, z: 0 }),
+        createControlPoint({ x: 2, z: 0 }),
+      ],
+      startLine: { controlPointIndex: 1, headingDeg: 0 },
+      checkpoints: [{ controlPointIndex: 2 }],
+    })
+    const next = editorReducer(doc, {
+      type: 'ADD_POINT',
+      point: createControlPoint({ x: 0.5, z: 0 }),
+      insertIndex: 1,
+    })
+    expect(next.startLine.controlPointIndex).toBe(2)
+    expect(next.checkpoints).toEqual([{ controlPointIndex: 3 }])
+  })
+
+  it('does not shift the start line or checkpoint indices for points inserted after them', () => {
+    const doc = createTrackDocument({
+      controlPoints: [
+        createControlPoint({ x: 0, z: 0 }),
+        createControlPoint({ x: 1, z: 0 }),
+        createControlPoint({ x: 2, z: 0 }),
+      ],
+      startLine: { controlPointIndex: 0, headingDeg: 0 },
+      checkpoints: [{ controlPointIndex: 1 }],
+    })
+    const next = editorReducer(doc, {
+      type: 'ADD_POINT',
+      point: createControlPoint({ x: 2.5, z: 0 }),
+      insertIndex: 3,
+    })
+    expect(next.startLine.controlPointIndex).toBe(0)
+    expect(next.checkpoints).toEqual([{ controlPointIndex: 1 }])
+  })
+
   it('moves a control point without affecting others', () => {
     const doc = createTrackDocument({
       controlPoints: [createControlPoint({ x: 0, z: 0 }), createControlPoint({ x: 1, z: 1 })],

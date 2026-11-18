@@ -5,7 +5,14 @@ import type { EditorAction } from '../domain/track/editorReducer'
 import { sampleClosedCatmullRom } from '../domain/track/spline'
 import { DEFAULT_GRID_SIZE, snapToGrid } from '../domain/track/grid'
 
-export type PointClickMode = 'select' | 'start-line' | 'checkpoint' | 'pan'
+/**
+ * CAD-style explicit tools, each with one unambiguous job:
+ * - 'select': click/drag existing points only. Clicking empty canvas deselects; it never adds a point.
+ * - 'add-point': click empty canvas inserts a new point at the nearest position along the loop. Clicking an existing point does nothing (this tool only adds).
+ * - 'start-line' / 'checkpoint': click an existing point to set/toggle it; unchanged.
+ * - 'pan': drag empty canvas to pan; unchanged.
+ */
+export type PointClickMode = 'select' | 'add-point' | 'start-line' | 'checkpoint' | 'pan'
 
 interface TrackEditor2DProps {
   doc: TrackDocument
@@ -17,7 +24,8 @@ interface TrackEditor2DProps {
   /** Controls what clicking an existing control point (or empty canvas, for 'pan') does. Defaults to selecting it (and allowing drag). */
   pointClickMode?: PointClickMode
   selectedIndex?: number | null
-  onSelectPoint?: (index: number) => void
+  /** Called with an existing point's index when selected in 'select' mode, or `null` when empty canvas is clicked to deselect. */
+  onSelectPoint?: (index: number | null) => void
   snapToGridEnabled?: boolean
   gridSize?: number
   /**
@@ -40,6 +48,41 @@ interface ViewTransform {
 }
 
 const DEFAULT_VIEW: ViewTransform = { zoom: 1, panX: 0, panY: 0 }
+
+/**
+ * The index to insert a new point at so it slots into the loop where it was actually
+ * clicked, instead of always tacking onto the end of the array - which, for a point clicked
+ * near the middle of an existing loop, would otherwise connect it with a long stray segment
+ * across the track. Finds the existing loop segment (including the wrap-around one from the
+ * last point back to the first) whose nearest point is closest to `point`, and returns the
+ * index right after that segment's start.
+ */
+function nearestInsertionIndex(point: { x: number; z: number }, controlPoints: { x: number; z: number }[]): number {
+  const n = controlPoints.length
+  // Fewer than 3 points isn't a real loop yet (a 2-point "loop" has one physical edge
+  // traversed both ways, which is a degenerate case for "nearest segment") - just keep
+  // appending while bootstrapping the first shape.
+  if (n < 3) return n
+
+  let bestDistSq = Infinity
+  let bestIndex = n
+  for (let i = 0; i < n; i++) {
+    const a = controlPoints[i]
+    const b = controlPoints[(i + 1) % n]
+    const abx = b.x - a.x
+    const abz = b.z - a.z
+    const lenSq = abx * abx + abz * abz
+    const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, ((point.x - a.x) * abx + (point.z - a.z) * abz) / lenSq))
+    const dx = point.x - (a.x + abx * t)
+    const dz = point.z - (a.z + abz * t)
+    const distSq = dx * dx + dz * dz
+    if (distSq < bestDistSq) {
+      bestDistSq = distSq
+      bestIndex = i + 1
+    }
+  }
+  return bestIndex
+}
 
 /** Computes a zoom/pan that fits all control points within `width`x`height`, centered, with padding. */
 function computeFitView(
@@ -129,15 +172,26 @@ export function TrackEditor2D({
   }
 
   const handleCanvasClick = (event: React.MouseEvent<SVGSVGElement>) => {
-    if (pointClickMode === 'pan') return // panning is a drag, not a click-to-add
+    if (pointClickMode === 'pan') return // panning is a drag, not a click
     if (draggingIndex !== null) return
     if (event.target !== svgRef.current) return // clicks on points are handled separately
-    const { x, z } = toLocalPoint(event.clientX, event.clientY)
-    dispatch({ type: 'ADD_POINT', point: createControlPoint({ x, z }) })
+
+    if (pointClickMode === 'add-point') {
+      const { x, z } = toLocalPoint(event.clientX, event.clientY)
+      const insertIndex = nearestInsertionIndex({ x, z }, doc.controlPoints)
+      dispatch({ type: 'ADD_POINT', point: createControlPoint({ x, z }), insertIndex })
+      return
+    }
+
+    if (pointClickMode === 'select') {
+      onSelectPoint?.(null) // empty-canvas click deselects; it never adds a point
+    }
   }
 
   const handlePointMouseDown = (index: number) => (event: React.MouseEvent) => {
     event.stopPropagation()
+
+    if (pointClickMode === 'add-point') return // this tool only adds; existing points are inert to it
 
     if (pointClickMode === 'start-line') {
       dispatch({ type: 'SET_START_LINE', controlPointIndex: index })
@@ -200,7 +254,11 @@ export function TrackEditor2D({
       data-testid="track-editor-canvas"
       width={width}
       height={height}
-      style={{ background: '#101418', touchAction: 'none', cursor: pointClickMode === 'pan' ? 'grab' : 'default' }}
+      style={{
+        background: '#101418',
+        touchAction: 'none',
+        cursor: pointClickMode === 'pan' ? 'grab' : pointClickMode === 'add-point' ? 'copy' : 'default',
+      }}
       onClick={handleCanvasClick}
       onMouseDown={handleCanvasMouseDown}
       onMouseMove={handleMouseMove}

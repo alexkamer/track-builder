@@ -38,14 +38,77 @@ describe('TrackEditor2D zoom/pan', () => {
     expect(dispatch).not.toHaveBeenCalled()
   })
 
-  it('does mutate track data (ADD_POINT) for a plain click when not in pan mode', () => {
+  it('dispatches ADD_POINT for a plain empty-canvas click in add-point mode', () => {
+    const dispatch = vi.fn()
+    render(<TrackEditor2D doc={sampleDoc()} dispatch={dispatch} pointClickMode="add-point" />)
+    const canvas = screen.getByTestId('track-editor-canvas')
+
+    fireEvent.click(canvas, { clientX: 50, clientY: 50, target: canvas })
+
+    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'ADD_POINT' }))
+  })
+
+  it('does not dispatch ADD_POINT for an empty-canvas click in select mode', () => {
     const dispatch = vi.fn()
     render(<TrackEditor2D doc={sampleDoc()} dispatch={dispatch} pointClickMode="select" />)
     const canvas = screen.getByTestId('track-editor-canvas')
 
     fireEvent.click(canvas, { clientX: 50, clientY: 50, target: canvas })
 
-    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'ADD_POINT' }))
+    expect(dispatch).not.toHaveBeenCalled()
+  })
+
+  it('deselects (rather than adding a point) on an empty-canvas click in select mode', () => {
+    const dispatch = vi.fn()
+    const onSelectPoint = vi.fn()
+    render(
+      <TrackEditor2D
+        doc={sampleDoc()}
+        dispatch={dispatch}
+        pointClickMode="select"
+        onSelectPoint={onSelectPoint}
+      />,
+    )
+    const canvas = screen.getByTestId('track-editor-canvas')
+
+    fireEvent.click(canvas, { clientX: 50, clientY: 50, target: canvas })
+
+    expect(onSelectPoint).toHaveBeenCalledWith(null)
+  })
+
+  it('ignores mousedown on an existing point in add-point mode (that tool only adds)', () => {
+    const dispatch = vi.fn()
+    const onSelectPoint = vi.fn()
+    render(
+      <TrackEditor2D
+        doc={sampleDoc()}
+        dispatch={dispatch}
+        pointClickMode="add-point"
+        onSelectPoint={onSelectPoint}
+      />,
+    )
+
+    fireEvent.mouseDown(screen.getByTestId('control-point-0'))
+
+    expect(onSelectPoint).not.toHaveBeenCalled()
+    expect(dispatch).not.toHaveBeenCalled()
+  })
+
+  it('inserts a new point at the nearest segment rather than always at the end', () => {
+    const dispatch = vi.fn()
+    // A right triangle: (10,10) -> (100,10) -> (100,100) -> back to (10,10). The editor
+    // auto-fits the view to the track on mount (zoom=4, pan=(100,20) for this triangle at
+    // the default 640x480 canvas size), so client coordinates must go through that
+    // transform rather than mapping 1:1 to local track coordinates.
+    render(<TrackEditor2D doc={sampleDoc()} dispatch={dispatch} pointClickMode="add-point" />)
+    const canvas = screen.getByTestId('track-editor-canvas')
+
+    // Local (100, 55) is the midpoint of the (100,10)->(100,100) segment (array indices 1->2).
+    fireEvent.click(canvas, { clientX: 100 * 4 + 100, clientY: 55 * 4 + 20, target: canvas })
+
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'ADD_POINT', insertIndex: 2 }),
+    )
   })
 })
 
