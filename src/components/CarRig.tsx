@@ -7,7 +7,8 @@ import { advanceCarRigFrame } from '../domain/physics/carRigStep'
 import { mergeCarInputs, readGamepadInput } from '../domain/physics/gamepadInput'
 import { bankingAt, elevationAt } from '../domain/physics/trackSurface'
 import type { GeneratedTrack } from '../domain/generation/generateTrack'
-import { CarModel, orientCarRoot, WHEEL_RADIUS, type CarModelHandle } from './CarModel'
+import { CarModel, orientCarRoot, type CarModelHandle } from './CarModel'
+import { advanceWheelSpin } from './carWheelSpin'
 
 export const FIXED_DT = 1 / 60
 /** Caps the ticks run in a single frame so a stalled tab doesn't fast-forward the simulation. */
@@ -88,7 +89,12 @@ export function CarRig({
       const steerAngle = steerInput * MAX_STEER_VISUAL_RAD
       for (const pivot of car.frontSteerPivots) pivot.rotation.y = steerAngle
 
-      wheelSpinRadRef.current += (renderState.speed / WHEEL_RADIUS) * delta
+      wheelSpinRadRef.current = advanceWheelSpin(
+        wheelSpinRadRef.current,
+        renderState.speed,
+        car.wheelRadius,
+        delta,
+      )
       for (const wheel of car.wheelMeshes) wheel.rotation.y = wheelSpinRadRef.current
     }
   })

@@ -7,7 +7,8 @@ import { advanceCarTick } from '../domain/physics/advanceCarTick'
 import { bankingAt, elevationAt } from '../domain/physics/trackSurface'
 import type { GeneratedTrack } from '../domain/generation/generateTrack'
 import type { SpawnTransform } from '../domain/generation/generateTrack'
-import { CarModel, orientCarRoot, WHEEL_RADIUS, type CarModelHandle } from './CarModel'
+import { CarModel, orientCarRoot, type CarModelHandle } from './CarModel'
+import { advanceWheelSpin } from './carWheelSpin'
 
 const FIXED_DT = 1 / 60
 const MAX_FRAME_DELTA = 0.25
@@ -69,7 +70,12 @@ export function GhostRig({ spawn, inputLog, track }: GhostRigProps) {
       const steerAngle = lastInputRef.current.steer * MAX_STEER_VISUAL_RAD
       for (const pivot of car.frontSteerPivots) pivot.rotation.y = steerAngle
 
-      wheelSpinRadRef.current += (renderState.speed / WHEEL_RADIUS) * delta
+      wheelSpinRadRef.current = advanceWheelSpin(
+        wheelSpinRadRef.current,
+        renderState.speed,
+        car.wheelRadius,
+        delta,
+      )
       for (const wheel of car.wheelMeshes) wheel.rotation.y = wheelSpinRadRef.current
     }
   })

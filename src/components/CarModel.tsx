@@ -1,6 +1,11 @@
 import { forwardRef, useImperativeHandle, useRef } from 'react'
 import { Quaternion, Vector3 } from 'three'
 import type { Group, Mesh } from 'three'
+import { readCarSource, type CarSource } from './carSource'
+import { useLowPolyCar } from './useLowPolyCar'
+// Type-only: erased at compile time, so the shipped bundle keeps no reference to the dev-only
+// loader module.
+import type { BuiltLowPolyCar } from './lowPolyCar'
 
 interface CarModelProps {
   color: string
@@ -14,6 +19,12 @@ export interface CarModelHandle {
   root: Group
   frontSteerPivots: [Group, Group]
   wheelMeshes: Mesh[]
+  /**
+   * The radius of this car's wheels, in world units. Belongs to the handle rather than being a
+   * module constant because car sources differ: a rig divides speed by it to get rolling spin,
+   * so reading the wrong one makes the wheels visibly skate instead of roll.
+   */
+  wheelRadius: number
 }
 
 export const WHEEL_RADIUS = 0.35
@@ -57,7 +68,7 @@ export function orientCarRoot(root: Group, headingRad: number, rollRad: number):
  * local-Y rotation is the rolling spin - unambiguous because it's set before the tilt is
  * applied, in the cylinder's own frame where its symmetry axis is Y.
  */
-export const CarModel = forwardRef<CarModelHandle, CarModelProps>(function CarModel({ color, opacity = 1, testId }, ref) {
+const PrimitiveCarModel = forwardRef<CarModelHandle, CarModelProps>(function PrimitiveCarModel({ color, opacity = 1, testId }, ref) {
   const rootRef = useRef<Group>(null)
   const steerPivotRefs = useRef<Group[]>([])
   const wheelMeshRefs = useRef<Mesh[]>([])
@@ -74,6 +85,7 @@ export const CarModel = forwardRef<CarModelHandle, CarModelProps>(function CarMo
       get wheelMeshes() {
         return wheelMeshRefs.current
       },
+      wheelRadius: WHEEL_RADIUS,
     }),
     [],
   )
@@ -115,4 +127,37 @@ export const CarModel = forwardRef<CarModelHandle, CarModelProps>(function CarMo
       })}
     </group>
   )
+})
+
+/**
+ * Read once per page load, not per render: switching cars is a reload, which also guarantees the
+ * new geometry starts in a clean scene. Always `primitive` outside a dev server.
+ */
+const CAR_SOURCE: CarSource = readCarSource()
+
+const LowPolyCarModel = forwardRef<CarModelHandle, { built: BuiltLowPolyCar; testId?: string }>(
+  function LowPolyCarModel({ built, testId }, ref) {
+    useImperativeHandle(ref, () => built.handle, [built])
+    return (
+      <group data-testid={testId}>
+        <primitive object={built.handle.root} />
+      </group>
+    )
+  },
+)
+
+/**
+ * The car, from whichever source is selected.
+ *
+ * The primitive car is the default, the only source in a production build, and the fallback
+ * whenever the optional one is unavailable - so this renders synchronously on first paint and
+ * introduces no Suspense boundary or async work into the default path.
+ */
+export const CarModel = forwardRef<CarModelHandle, CarModelProps>(function CarModel(props, ref) {
+  const lowPoly = useLowPolyCar(CAR_SOURCE, props.color, props.opacity ?? 1)
+
+  if (lowPoly) {
+    return <LowPolyCarModel built={lowPoly} testId={props.testId} ref={ref} />
+  }
+  return <PrimitiveCarModel {...props} ref={ref} />
 })

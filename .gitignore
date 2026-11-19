@@ -25,8 +25,19 @@ dist-ssr
 .scratch/
 data/
 
+# Python bytecode from scripts/
+__pycache__/
+*.pyc
+
 # Raw 3D source assets (.blend/.fbx/.obj/.stl + archives). These are hundreds of MB to over a
 # gigabyte each and git keeps them forever, so they stay local. Only the small optimized
 # runtime models exported from them belong in the repo, under public/assets/.
 LowPoly_Cars/
 Ferrari_Concept/
+
+# Cars generated from those source packs by scripts/extract_car.py. The packs are CGTrader
+# royalty-free downloads: usable inside an end product, NOT redistributable as files, so these
+# are a local developer-only option (load the app with ?car=lowpoly) and must never be
+# committed. Deliberately NOT under public/, which Vite copies verbatim into dist/ - a
+# dev-only Vite middleware serves them instead. See docs/dev-cars.md.
+dev-cars/
