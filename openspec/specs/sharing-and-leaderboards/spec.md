@@ -22,7 +22,7 @@ The system SHALL save a track as a versioned JSON document matching the track da
 - **THEN** that session id is stored as the track's creator for later ownership checks
 
 ### Requirement: Shareable track URL
-The system SHALL generate a unique URL for each saved track such that opening that URL loads the same track for racing, without requiring the opener to have created or previously accessed it.
+The system SHALL generate a unique URL for each saved track such that opening that URL loads the same track for racing, without requiring the opener to have created or previously accessed it, and SHALL provide a control that copies the generated URL to the clipboard with visible confirmation.
 
 #### Scenario: Opening a shared track URL
 - **WHEN** a user who did not create a track opens its shareable URL
@@ -31,6 +31,18 @@ The system SHALL generate a unique URL for each saved track such that opening th
 #### Scenario: Each saved track has a distinct URL
 - **WHEN** two different tracks are saved
 - **THEN** their shareable URLs are distinct and each resolves only to its own track
+
+#### Scenario: Copying the shareable URL
+- **WHEN** a shareable URL has been generated and the user activates the copy control
+- **THEN** the full URL is written to the clipboard and the user is shown a confirmation that it was copied
+
+#### Scenario: Copy fails
+- **WHEN** the user activates the copy control and the clipboard write is rejected or unavailable
+- **THEN** the user is told the copy did not succeed and the URL remains visible and selectable so it can be copied manually
+
+#### Scenario: Copy control only present with a URL
+- **WHEN** no shareable URL has been generated for the current track
+- **THEN** no copy control is offered
 
 ### Requirement: Anonymous session identity
 The system SHALL identify users by an anonymous session, without requiring account creation, and SHALL let the user set an optional display name used when submitting lap times.
