@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Trackforge — Pit Wall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --surface: #141416;
+    --surface-recessed: #060607;
+    --surface-raised: #1c1c1f;
+    --bezel-hi: #2a2a2e;
+    --bezel-lo: #050506;
+    --line: #28282b;
+    --text: #e8e8ea;
+    --text-dim: #8c8c92;
+    --text-faint: #5c5c62;
+    --amber: #f5a623;
+    --green: #27c972;
+    --red: #e5484d;
+
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 20px;
+    --sp-6: 24px;
+
+    font-family: 'Titillium Web', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+  }
+
+  .label-caps {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+
+  .top {
+    height: 44px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--sp-5);
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+  .wordmark { font-weight: 900; font-size: 14px; letter-spacing: 0.04em; }
+  .wordmark em { font-style: normal; color: var(--text-dim); font-weight: 400; margin-left: var(--sp-3); }
+  .status { display: flex; align-items: center; gap: var(--sp-2); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--green); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  .console {
+    flex-shrink: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-4);
+    background: var(--bg);
+  }
+  .bank {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--surface);
+    border: 1px solid var(--bezel-lo);
+    border-top-color: var(--bezel-hi);
+    border-radius: 3px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .bank:last-child { margin-left: auto; }
+  .bank-label { margin-right: 2px; }
+
+  button { font-family: 'Titillium Web', sans-serif; font-weight: 600; font-size: 13px; white-space: nowrap; cursor: pointer; }
+  select, input {
+    font-family: 'Titillium Web', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    background: var(--surface-raised);
+    color: var(--text);
+    border: 1px solid var(--bezel-lo);
+    border-top: 1px solid var(--bezel-hi);
+    border-radius: 3px;
+    padding: 7px 12px;
+    white-space: nowrap;
+  }
+
+  /* Secondary console actions sit flush with the panel instead of raised off it - an
+     unlit button next to lit switches reads as "not the thing you're operating right now". */
+  .btn-flat {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid transparent;
+    border-radius: 3px;
+    padding: 7px 10px;
+  }
+  .btn-flat:hover { color: var(--text); border-color: var(--line); }
+
+  /* The five mutually-exclusive canvas tools as a bank of connected rocker switches.
+     The active one is lit amber and sits visually "pressed" (inset shadow) rather than
+     just recolored, matching how a real toggle switch indicates its own state. */
+  .switches {
+    display: flex;
+    border-radius: 3px;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px var(--bezel-lo);
+  }
+  .switches button {
+    background: var(--surface-raised);
+    color: var(--text);
+    border: none;
+    border-right: 1px solid var(--bezel-lo);
+    border-radius: 0;
+    padding: 7px 12px;
+  }
+  .switches button:last-child { border-right: none; }
+  .switches button:hover:not([data-active="true"]) { background: #242428; }
+  .switches button[data-active="true"] {
+    background: var(--amber);
+    color: #1a1204;
+    box-shadow: inset 0 2px 3px rgba(0,0,0,0.35);
+  }
+
+  /* An independent toggle, styled as a single detached rocker so it still reads as a
+     switch rather than a momentary push. */
+  .btn-switch {
+    background: var(--surface-raised);
+    color: var(--text);
+    border: 1px solid var(--bezel-lo);
+    border-top-color: var(--bezel-hi);
+    border-radius: 3px;
+    padding: 7px 12px;
+  }
+  .btn-switch[data-active="true"] {
+    background: var(--amber);
+    color: #1a1204;
+    border-color: #c6850f;
+    box-shadow: inset 0 2px 3px rgba(0,0,0,0.35);
+  }
+
+  /* Momentary pushbuttons (undo/redo) - small, flush, no bezel highlight, so they read
+     as a quick tap rather than a state you're setting. */
+  .btn-momentary {
+    background: var(--bg);
+    color: var(--text-dim);
+    border: 1px solid var(--bezel-lo);
+    border-radius: 3px;
+    padding: 7px 10px;
+  }
+  .btn-momentary:hover:not(:disabled) { color: var(--text); border-color: var(--line); }
+  .btn-momentary:disabled { color: var(--text-faint); cursor: default; }
+
+  /* Race control's GO button - the one thing on this console with color as status,
+     not decoration. Grey and flat until the track is actually raceable. */
+  .btn-go {
+    background: var(--surface-raised);
+    color: var(--text-dim);
+    border: 1px solid var(--bezel-lo);
+    border-top-color: var(--bezel-hi);
+    border-radius: 3px;
+    padding: 8px 20px;
+    font-weight: 700;
+  }
+  .btn-go[data-ready="true"] {
+    background: var(--green);
+    color: #04140a;
+    border-color: #1a9d58;
+    box-shadow: 0 0 10px rgba(39, 201, 114, 0.45);
+  }
+  .btn-go:disabled { cursor: default; }
+
+  .btn-danger {
+    margin-top: var(--sp-2);
+    width: 100%;
+    background: transparent;
+    color: var(--red);
+    border: 1px solid var(--red);
+    border-radius: 3px;
+    padding: 7px 12px;
+    font-weight: 600;
+  }
+  .btn-danger:hover { background: var(--red); color: #1a0506; }
+
+  .shortcut { font-family: 'JetBrains Mono', monospace; font-weight: 400; font-size: 10px; color: var(--text-faint); margin-left: 6px; }
+  .switches [data-active="true"] .shortcut, .btn-go[data-ready="true"] .shortcut { color: inherit; opacity: 0.75; }
+
+  .signal {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--amber);
+    padding: 0 var(--sp-1);
+  }
+  .signal-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+
+  .work { flex: 1; display: flex; overflow: hidden; padding: 0 var(--sp-4) var(--sp-4); gap: var(--sp-3); }
+  .canvas-pane { flex: 1; display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+  .hint { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-dim); }
+  .canvas {
+    flex: 1;
+    position: relative;
+    background: radial-gradient(ellipse at 50% 40%, #16161a 0%, #0a0a0b 75%);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .canvas svg { position: absolute; inset: 0; }
+  .turn-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    fill: var(--text);
+  }
+  .readouts {
+    position: absolute;
+    left: var(--sp-3);
+    bottom: var(--sp-3);
+    display: flex;
+    gap: var(--sp-2);
+  }
+  .readout-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--text-dim);
+    background: rgba(6,6,7,0.8);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 4px 9px;
+  }
+
+  .rail { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--bezel-lo);
+    border-top: 1px solid var(--bezel-hi);
+    border-radius: 4px;
+    padding: var(--sp-3) var(--sp-4);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--sp-3);
+  }
+  .panel-title { color: var(--amber); }
+  .live-tag {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--red);
+  }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--red);
+    animation: live-pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes live-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(229,72,77,0.6); }
+    50% { box-shadow: 0 0 0 4px rgba(229,72,77,0); }
+  }
+
+  .viewfinder { position: relative; }
+  .preview-box {
+    height: 140px;
+    background: var(--surface-recessed);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .preview-box svg.track-render { width: 88%; }
+  .bracket {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--amber);
+    opacity: 0.55;
+  }
+  .bracket.tl { top: 5px; left: 5px; border-right: none; border-bottom: none; }
+  .bracket.tr { top: 5px; right: 5px; border-left: none; border-bottom: none; }
+  .bracket.bl { bottom: 5px; left: 5px; border-right: none; border-top: none; }
+  .bracket.br { bottom: 5px; right: 5px; border-left: none; border-top: none; }
+
+  .preview-caption {
+    display: flex;
+    gap: var(--sp-4);
+    margin-top: var(--sp-2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .preview-caption strong { color: var(--text); font-weight: 500; }
+
+  .prop-row { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-2) 0; }
+  .prop-label { color: var(--text-dim); font-size: 12px; font-weight: 400; }
+  .prop-input-group { display: flex; align-items: center; gap: 5px; }
+  .prop-row input {
+    width: 68px; text-align: right;
+    font-family: 'JetBrains Mono', monospace; font-weight: 500;
+    padding: 5px 8px;
+  }
+  .prop-unit { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-faint); width: 14px; }
+
+  .prop-range {
+    position: relative;
+    height: 4px;
+    margin: 0 0 var(--sp-2);
+    background: var(--surface-recessed);
+    border: 1px solid var(--bezel-lo);
+    border-radius: 2px;
+  }
+  .prop-range-fill {
+    position: absolute;
+    top: -1px; bottom: -1px; left: -1px;
+    background: var(--amber);
+    border-radius: 2px;
+    opacity: 0.85;
+  }
+  .prop-range-knob {
+    position: absolute;
+    top: 50%;
+    width: 8px; height: 8px;
+    background: var(--amber);
+    border: 1px solid #1a1204;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .prop-readonly {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  .footer {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-5);
+    padding: var(--sp-2) var(--sp-5);
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+  }
+  .meta-field { display: flex; align-items: center; gap: var(--sp-2); }
+  .meta-field input { width: 170px; font-weight: 400; }
+  .errors { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--red); margin-left: auto; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="wordmark">TRACKFORGE<em>Circuit Engineering</em></div>
+    <div class="status"><span class="status-dot"></span>SIM LINK OK</div>
+  </div>
+
+  <div class="console">
+    <div class="bank">
+      <span class="label-caps bank-label">TRACK</span>
+      <select><option>Oval Speedway</option></select>
+      <input value="Oval Speedway" style="width:140px" />
+      <button class="btn-flat">Save</button>
+      <select><option>Load saved…</option></select>
+      <button class="btn-flat">Share</button>
+    </div>
+    <div class="bank">
+      <span class="label-caps bank-label">TOOLS</span>
+      <div class="switches">
+        <button data-active="true">Select</button>
+        <button>Add point</button>
+        <button>Set start/finish</button>
+        <button>Checkpoints</button>
+        <button>Pan</button>
+      </div>
+      <button class="btn-switch">Snap to grid</button>
+      <button class="btn-momentary">Undo<span class="shortcut">⌘Z</span></button>
+      <button class="btn-momentary" disabled>Redo<span class="shortcut">⌘Y</span></button>
+    </div>
+    <div class="bank">
+      <span class="label-caps bank-label">RACE</span>
+      <button class="btn-go" disabled>Start Race</button>
+      <div class="signal"><span class="signal-dot"></span>2 ISSUES</div>
+      <button class="btn-flat">Browse Tracks</button>
+    </div>
+  </div>
+
+  <div class="work">
+    <div class="canvas-pane">
+      <div class="hint">CLICK A CONTROL POINT TO SELECT IT, OR DRAG IT TO MOVE</div>
+      <div class="canvas">
+        <svg viewBox="0 0 600 420" preserveAspectRatio="xMidYMid meet">
+          <!-- Radar-style background grid: decorative, not aligned to track geometry -->
+          <g stroke="#1c1c1f" fill="none">
+            <circle cx="300" cy="210" r="60" opacity="0.5"/>
+            <circle cx="300" cy="210" r="120" opacity="0.5"/>
+            <circle cx="300" cy="210" r="180" opacity="0.5"/>
+            <circle cx="300" cy="210" r="240" opacity="0.5"/>
+            <line x1="300" y1="0" x2="300" y2="420" opacity="0.35"/>
+            <line x1="0" y1="210" x2="600" y2="210" opacity="0.35"/>
+          </g>
+
+          <ellipse cx="300" cy="210" rx="220" ry="140" fill="none" stroke="#e8e8ea" stroke-width="2" opacity="0.9"/>
+
+          <!-- Direction-of-travel chevrons -->
+          <g stroke="#8c8c92" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.6">
+            <g transform="translate(410,89) rotate(20)"><path d="M -5,-4 L 5,0 L -5,4"/></g>
+            <g transform="translate(520,210) rotate(90)"><path d="M -5,-4 L 5,0 L -5,4"/></g>
+            <g transform="translate(410,331) rotate(160)"><path d="M -5,-4 L 5,0 L -5,4"/></g>
+            <g transform="translate(190,331) rotate(200)"><path d="M -5,-4 L 5,0 L -5,4"/></g>
+            <g transform="translate(80,210) rotate(270)"><path d="M -5,-4 L 5,0 L -5,4"/></g>
+            <g transform="translate(190,89) rotate(340)"><path d="M -5,-4 L 5,0 L -5,4"/></g>
+          </g>
+
+          <!-- Start/finish gantry -->
+          <line x1="300" y1="56" x2="300" y2="84" stroke="#f5a623" stroke-width="3"/>
+
+          <g font-family="JetBrains Mono" font-size="11" fill="#8c8c92">
+            <circle cx="300" cy="70" r="9" fill="#f5a623" stroke="#1a1204" stroke-width="1.5"/>
+            <text x="300" y="74" text-anchor="middle" fill="#1a1204" font-weight="700">S</text>
+            <circle cx="500" cy="140" r="8" fill="#141416" stroke="#e8e8ea" stroke-width="1.5"/>
+            <text x="500" y="163" text-anchor="middle" class="turn-label">T1</text>
+            <circle cx="500" cy="280" r="8" fill="#141416" stroke="#e8e8ea" stroke-width="1.5"/>
+            <text x="500" y="303" text-anchor="middle" class="turn-label">T2</text>
+            <circle cx="300" cy="350" r="8" fill="#141416" stroke="#e8e8ea" stroke-width="1.5"/>
+            <text x="300" y="373" text-anchor="middle" class="turn-label">T3</text>
+            <circle cx="100" cy="280" r="8" fill="#141416" stroke="#e8e8ea" stroke-width="1.5"/>
+            <text x="100" y="303" text-anchor="middle" class="turn-label">T4</text>
+            <circle cx="100" cy="140" r="8" fill="#141416" stroke="#e8e8ea" stroke-width="1.5"/>
+            <text x="100" y="163" text-anchor="middle" class="turn-label">T5</text>
+          </g>
+        </svg>
+        <div class="readouts">
+          <span class="readout-chip">1.84 KM</span>
+          <span class="readout-chip">5 CORNERS</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="rail">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="label-caps panel-title">3D PREVIEW</span>
+          <span class="live-tag"><span class="live-dot"></span>LIVE</span>
+        </div>
+        <div class="viewfinder">
+          <div class="preview-box">
+            <svg class="track-render" viewBox="0 0 200 100">
+              <path d="M0,70 Q100,20 200,70" fill="none" stroke="#f5a623" stroke-width="16" opacity="0.4"/>
+              <path d="M0,70 Q100,20 200,70" fill="none" stroke="#e8e8ea" stroke-width="1" stroke-dasharray="5 5" opacity="0.6"/>
+            </svg>
+          </div>
+          <span class="bracket tl"></span>
+          <span class="bracket tr"></span>
+          <span class="bracket bl"></span>
+          <span class="bracket br"></span>
+        </div>
+        <div class="preview-caption">
+          <span>LENGTH <strong>1.84 KM</strong></span>
+          <span>ELEV <strong>+4.2 M</strong></span>
+        </div>
+      </div>
+      <div class="panel">
+        <span class="label-caps panel-title">CORNER T3 SETUP</span>
+        <div class="prop-row">
+          <span class="prop-label">Width</span>
+          <div class="prop-input-group"><input value="14.0" /><span class="prop-unit">m</span></div>
+        </div>
+        <div class="prop-range"><div class="prop-range-fill" style="width:57%"></div><div class="prop-range-knob" style="left:57%"></div></div>
+
+        <div class="prop-row">
+          <span class="prop-label">Elevation</span>
+          <div class="prop-input-group"><input value="0.0" /><span class="prop-unit">m</span></div>
+        </div>
+        <div class="prop-range"><div class="prop-range-fill" style="width:50%"></div><div class="prop-range-knob" style="left:50%"></div></div>
+
+        <div class="prop-row">
+          <span class="prop-label">Banking</span>
+          <div class="prop-input-group"><input value="8.0" /><span class="prop-unit">°</span></div>
+        </div>
+        <div class="prop-range"><div class="prop-range-fill" style="width:59%"></div><div class="prop-range-knob" style="left:59%"></div></div>
+
+        <div class="prop-row">
+          <span class="prop-label">Min. radius</span>
+          <span class="prop-readonly">18.4 m</span>
+        </div>
+
+        <button class="btn-danger">Delete point<span class="shortcut">DEL</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="meta-field"><label class="label-caps">AUTHOR</label><input placeholder="—" /></div>
+    <div class="meta-field"><label class="label-caps">NOTES</label><input value="A fast, wide oval." style="width:250px" /></div>
+    <div class="errors">✕ Start/finish line not set&nbsp;&nbsp;&nbsp;✕ Corner T4 is below the minimum radius</div>
+  </div>
+</body>
+</html>

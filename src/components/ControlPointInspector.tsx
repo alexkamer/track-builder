@@ -18,7 +18,7 @@ export function ControlPointInspector({
 }: ControlPointInspectorProps) {
   if (selectedIndex === null || !doc.controlPoints[selectedIndex]) {
     return (
-      <div className="inspector" data-testid="control-point-inspector">
+      <div className="inspector panel" data-testid="control-point-inspector">
         <p>Select a control point to edit its width, elevation, and banking.</p>
       </div>
     )
@@ -28,12 +28,13 @@ export function ControlPointInspector({
   const canDelete = doc.controlPoints.length > MIN_CONTROL_POINTS
 
   return (
-    <div className="inspector" data-testid="control-point-inspector">
-      <h3>Control point {selectedIndex}</h3>
-      <label>
+    <div className="inspector panel" data-testid="control-point-inspector">
+      <h3 className="panel-title">Control point {selectedIndex}</h3>
+      <label className="field-label">
         Width
         <input
           type="number"
+          className="field"
           data-testid="point-width-input"
           value={point.width}
           min={2}
@@ -43,10 +44,11 @@ export function ControlPointInspector({
           }
         />
       </label>
-      <label>
+      <label className="field-label">
         Elevation
         <input
           type="number"
+          className="field"
           data-testid="point-elevation-input"
           value={point.elevation}
           step={0.5}
@@ -59,14 +61,15 @@ export function ControlPointInspector({
           }
         />
       </label>
-      <label>
+      <label className="field-label">
         Banking (deg)
         <input
           type="number"
+          className="field"
           data-testid="point-banking-input"
           value={point.bankingDeg}
-          min={-45}
-          max={45}
+          min={-60}
+          max={60}
           step={1}
           onChange={(e) =>
             dispatch({
@@ -79,11 +82,12 @@ export function ControlPointInspector({
       </label>
       <button
         type="button"
+        className="btn btn--danger"
         data-testid="delete-point-button"
         disabled={!canDelete}
         onClick={() => onDeletePoint?.(selectedIndex)}
       >
-        Delete point
+        Delete point <span className="btn-shortcut">Del</span>
       </button>
     </div>
   )

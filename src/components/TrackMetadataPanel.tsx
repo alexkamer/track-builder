@@ -9,11 +9,12 @@ interface TrackMetadataPanelProps {
 
 export function TrackMetadataPanel({ doc, dispatch, onCommit }: TrackMetadataPanelProps) {
   return (
-    <div className="toolbar" data-testid="track-metadata-panel">
-      <label>
+    <div className="metadata-panel panel" data-testid="track-metadata-panel">
+      <label className="field-label">
         Author
         <input
           type="text"
+          className="field"
           data-testid="metadata-author-input"
           value={doc.metadata.author ?? ''}
           placeholder="Author"
@@ -23,10 +24,11 @@ export function TrackMetadataPanel({ doc, dispatch, onCommit }: TrackMetadataPan
           onBlur={() => onCommit?.()}
         />
       </label>
-      <label>
+      <label className="field-label">
         Description
         <input
           type="text"
+          className="field"
           data-testid="metadata-description-input"
           value={doc.metadata.description ?? ''}
           placeholder="Description"

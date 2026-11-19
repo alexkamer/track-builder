@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { RaceScene } from './RaceScene'
 import { createControlPoint, createTrackDocument } from '../domain/track/schema'
@@ -71,5 +71,32 @@ describe('RaceScene', () => {
 
     expect(screen.getByTestId('speed-display')).toHaveTextContent('0')
     expect(screen.getByTestId('elevation-display')).toHaveTextContent('Elevation: 0.0m')
+  })
+
+  it('mounts and stays interactive in an environment that cannot load assets or create a WebGL context', async () => {
+    // jsdom has no WebGL and cannot decode images, so every scene asset fails here - the same
+    // shape of failure as an offline user or a missing file. None of that may stop the race
+    // view from mounting or leave its controls dead, and none of it may surface as an
+    // unhandled error.
+    const unhandled = vi.fn()
+    window.addEventListener('unhandledrejection', unhandled)
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    render(<RaceScene doc={squareTrack()} />)
+
+    expect(screen.getByTestId('race-hud')).toBeInTheDocument()
+    expect(screen.getByTestId('stats-hud')).toBeInTheDocument()
+
+    // The controls still work, rather than being rendered but inert.
+    fireEvent.click(screen.getByTestId('camera-toggle-button'))
+    expect(screen.getByTestId('camera-toggle-button')).toHaveTextContent('Top-down')
+
+    fireEvent.click(screen.getByTestId('restart-button'))
+    expect(screen.getByTestId('countdown-overlay')).toHaveTextContent('3')
+
+    await waitFor(() => expect(unhandled).not.toHaveBeenCalled())
+
+    window.removeEventListener('unhandledrejection', unhandled)
+    consoleError.mockRestore()
   })
 })

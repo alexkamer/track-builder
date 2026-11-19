@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createControlPoint, createTrackDocument } from '../track/schema'
-import { generateTrack } from '../generation/generateTrack'
+import { BARRIER_RIDGE_DEPTH, generateTrack, ringVertex } from '../generation/generateTrack'
 import { createInitialCarState } from './carPhysics'
 import { resolveBarrierCollision } from './barrierCollision'
 import { nearestCenterlineIndex } from './trackSurface'
@@ -74,8 +74,8 @@ describe('resolveBarrierCollision', () => {
 
     const index = nearestCenterlineIndex(state, track)
     const center = track.centerline[index]
-    const leftBase = track.barrierLeft.positions[index * 2]
-    const rightBase = track.barrierRight.positions[index * 2]
+    const leftBase = ringVertex(track.barrierLeft, index)
+    const rightBase = ringVertex(track.barrierRight, index)
     const normalX = (leftBase.x - rightBase.x) / Math.hypot(leftBase.x - rightBase.x, leftBase.z - rightBase.z)
     const normalZ = (leftBase.z - rightBase.z) / Math.hypot(leftBase.x - rightBase.x, leftBase.z - rightBase.z)
 
@@ -89,6 +89,35 @@ describe('resolveBarrierCollision', () => {
     const inwardComponent = forwardX * (inwardSign * normalX) + forwardZ * (inwardSign * normalZ)
 
     expect(inwardComponent).toBeGreaterThan(0)
+  })
+
+  it('uses the barrier inner face as the boundary, not the outward ridge of its profile', () => {
+    // The armco profile folds a ridge BARRIER_RIDGE_DEPTH outward at mid height. The wall the
+    // car hits is the inner face, so a car sitting between the inner face and the ridge must
+    // still collide. Reading any later profile vertex as the boundary would let it through -
+    // which is exactly what a hardcoded `positions[index * 2]` stride does on a 4-point profile.
+    const track = generateTrack(wideSquareTrack())
+
+    // Ring 8 is mid-way along the first (straight) edge, so the lateral direction there is
+    // well-defined and the car's nearest ring stays the one we measured against.
+    const ring = 8
+    const center = track.centerline[ring]
+    const innerFace = ringVertex(track.barrierLeft, ring)
+    const innerDistance = Math.hypot(innerFace.x - center.x, innerFace.z - center.z)
+    const unitX = (innerFace.x - center.x) / innerDistance
+    const unitZ = (innerFace.z - center.z) / innerDistance
+
+    const beyondInnerFace = innerDistance + BARRIER_RIDGE_DEPTH / 2
+    const state = {
+      ...createInitialCarState(center.x + unitX * beyondInnerFace, center.z + unitZ * beyondInnerFace, Math.PI / 2),
+      speed: 20,
+    }
+    expect(nearestCenterlineIndex(state, track)).toBe(ring)
+
+    const result = resolveBarrierCollision(state, track)
+
+    expect(lateralOffsetFromCenterline(result, track)).toBeLessThan(innerDistance)
+    expect(result.speed).toBeLessThan(state.speed)
   })
 
   it('floors post-collision speed above a minimum escape speed across repeated grazing hits', () => {

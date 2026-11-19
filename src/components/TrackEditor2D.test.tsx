@@ -123,6 +123,36 @@ function farOffOriginDoc() {
   })
 }
 
+describe('TrackEditor2D grid overlay', () => {
+  it('covers the area under a far off-origin track once the view fits it, not a patch near world origin', () => {
+    const dispatch = vi.fn()
+    render(
+      <TrackEditor2D
+        doc={farOffOriginDoc()}
+        dispatch={dispatch}
+        width={640}
+        height={480}
+        loadKey="preset-far:t1"
+        snapToGridEnabled
+        gridSize={20}
+      />,
+    )
+
+    const lines = screen.getByTestId('grid-overlay').querySelectorAll('line')
+    expect(lines.length).toBeGreaterThan(0)
+
+    // The track sits around x=[4000,4300], z=[-4000,-3700]. If the grid were still anchored
+    // to world (0,0)-(640,480) (the pre-fix bug), none of its lines would reach anywhere near
+    // the track's actual coordinates.
+    const xs = Array.from(lines).map((l) => Number(l.getAttribute('x1')))
+    const zs = Array.from(lines).map((l) => Number(l.getAttribute('y1')))
+    expect(Math.min(...xs)).toBeLessThanOrEqual(4000)
+    expect(Math.max(...xs)).toBeGreaterThanOrEqual(4300)
+    expect(Math.min(...zs)).toBeLessThanOrEqual(-4000)
+    expect(Math.max(...zs)).toBeGreaterThanOrEqual(-3700)
+  })
+})
+
 function getViewTransform() {
   const group = screen.getByTestId('view-transform-group')
   const match = group.getAttribute('transform')!.match(/translate\(([-\d.]+),([-\d.]+)\) scale\(([-\d.]+)\)/)

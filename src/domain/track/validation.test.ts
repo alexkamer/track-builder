@@ -5,6 +5,7 @@ import {
   MIN_CORNER_RADIUS,
   validateClosedLoop,
   validateCornerRadius,
+  validateGroundClearance,
   validateSelfIntersection,
   validateStartLine,
   validateTrack,
@@ -115,6 +116,50 @@ describe('validateCornerRadius', () => {
   })
 })
 
+describe('validateGroundClearance', () => {
+  it('passes for a flat, unbanked track', () => {
+    const doc = createTrackDocument({ controlPoints: largeSmoothSquare() })
+    expect(validateGroundClearance(doc)).toBeNull()
+  })
+
+  it('passes for a banked track with enough elevation to clear the ground', () => {
+    const doc = createTrackDocument({
+      controlPoints: [
+        createControlPoint({ x: 0, z: 0, width: 20, elevation: 10, bankingDeg: 20 }),
+        createControlPoint({ x: 200, z: 0, width: 20, elevation: 10, bankingDeg: 20 }),
+        createControlPoint({ x: 200, z: 200, width: 20, elevation: 10 }),
+        createControlPoint({ x: 0, z: 200, width: 20, elevation: 10 }),
+      ],
+    })
+    expect(validateGroundClearance(doc)).toBeNull()
+  })
+
+  it('fails when banking at a low-elevation control point tilts an edge below ground', () => {
+    // halfWidth 10, banking 20deg -> sin(20deg)*10 ≈ 3.4 units of tilt, well past elevation 0.
+    const doc = createTrackDocument({
+      controlPoints: [
+        createControlPoint({ x: 0, z: 0, width: 20, elevation: 0, bankingDeg: 20 }),
+        createControlPoint({ x: 200, z: 0, width: 20, elevation: 0, bankingDeg: 20 }),
+        createControlPoint({ x: 200, z: 200, width: 20, elevation: 0 }),
+        createControlPoint({ x: 0, z: 200, width: 20, elevation: 0 }),
+      ],
+    })
+    expect(validateGroundClearance(doc)?.code).toBe('ROAD_BELOW_GROUND')
+  })
+
+  it('identifies the offending control point in the error message', () => {
+    const doc = createTrackDocument({
+      controlPoints: [
+        createControlPoint({ x: 0, z: 0, width: 20, elevation: 0, bankingDeg: 20 }),
+        createControlPoint({ x: 200, z: 0, width: 20, elevation: 0, bankingDeg: 20 }),
+        createControlPoint({ x: 200, z: 200, width: 20, elevation: 0 }),
+        createControlPoint({ x: 0, z: 200, width: 20, elevation: 0 }),
+      ],
+    })
+    expect(validateGroundClearance(doc)?.message).toMatch(/control point \d/)
+  })
+})
+
 describe('validateTrackMinimal', () => {
   it('returns no errors for a valid minimal track', () => {
     const doc = createTrackDocument({
@@ -156,5 +201,18 @@ describe('validateTrack (full set)', () => {
       startLine: { controlPointIndex: 0, headingDeg: 0 },
     })
     expect(validateTrack(doc).map((e) => e.code)).toContain('CORNER_RADIUS_TOO_TIGHT')
+  })
+
+  it('includes a road-below-ground error for banking at zero elevation even with a start line set', () => {
+    const doc = createTrackDocument({
+      controlPoints: [
+        createControlPoint({ x: 0, z: 0, width: 20, elevation: 0, bankingDeg: 20 }),
+        createControlPoint({ x: 200, z: 0, width: 20, elevation: 0, bankingDeg: 20 }),
+        createControlPoint({ x: 200, z: 200, width: 20, elevation: 0 }),
+        createControlPoint({ x: 0, z: 200, width: 20, elevation: 0 }),
+      ],
+      startLine: { controlPointIndex: 0, headingDeg: 0 },
+    })
+    expect(validateTrack(doc).map((e) => e.code)).toContain('ROAD_BELOW_GROUND')
   })
 })

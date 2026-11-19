@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Trackforge — Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --border: #e1e4e9;
+    --border-strong: #c7cbd3;
+    --text: #1a1d21;
+    --text-dim: #80858f;
+    --blue: #2f6fed;
+    --blue-wash: #eaf0fe;
+    --red: #e5484d;
+    --green: #1a9d58;
+    font-family: 'Public Sans', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+  }
+
+  .top {
+    height: 48px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .wordmark { font-weight: 700; font-size: 15px; }
+  .mode-tabs { display: flex; gap: 2px; background: var(--bg); border-radius: 6px; padding: 2px; }
+  .mode-tab { font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 5px; color: var(--text-dim); }
+  .mode-tab.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+
+  .ribbon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 8px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .group { display: flex; align-items: center; gap: 6px; padding: 0 14px; }
+  .divider { width: 1px; height: 22px; background: var(--border); }
+  .group.push { margin-left: auto; }
+
+  button { font-family: 'Public Sans', sans-serif; font-size: 13px; font-weight: 500; white-space: nowrap; cursor: pointer; }
+  select, input {
+    font-family: 'Public Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 11px;
+    white-space: nowrap;
+  }
+
+  /* File actions read as text links, not boxes - they're occasional, not something
+     you're actively manipulating like the tool strip next to them. */
+  .btn-text {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-dim);
+    padding: 6px 9px;
+    border-radius: 6px;
+  }
+  .btn-text:hover { color: var(--text); background: var(--bg); }
+
+  /* The five mutually-exclusive canvas tools as one connected segmented control -
+     Figma/Linear-style - so "exactly one is active" is a shape, not just a color. */
+  .segmented {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    overflow: hidden;
+  }
+  .segmented button {
+    background: var(--surface);
+    color: var(--text);
+    border: none;
+    border-right: 1px solid var(--border);
+    border-radius: 0;
+    padding: 6px 12px;
+  }
+  .segmented button:last-child { border-right: none; }
+  .segmented button:hover:not([data-active="true"]) { background: var(--bg); }
+  .segmented button[data-active="true"] {
+    background: var(--blue-wash);
+    color: var(--blue);
+    font-weight: 600;
+  }
+
+  /* An independent toggle, styled as a detached pill so it still reads as "on/off"
+     without implying it's part of the mutually-exclusive tool group beside it. */
+  .btn-toggle {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 6px 12px;
+  }
+  .btn-toggle:hover { border-color: var(--border-strong); }
+  .btn-toggle[data-active="true"] {
+    background: var(--blue-wash);
+    color: var(--blue);
+    border-color: var(--blue);
+    font-weight: 600;
+  }
+
+  /* Momentary actions (undo/redo) get no border at all - the lightest-weight control
+     on the page, since they don't set any state. */
+  .btn-icon {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-dim);
+    padding: 6px 8px;
+    border-radius: 6px;
+  }
+  .btn-icon:hover:not(:disabled) { color: var(--text); background: var(--bg); }
+  .btn-icon:disabled { color: #c7cbd3; cursor: default; }
+
+  .btn-primary {
+    background: var(--blue);
+    color: #fff;
+    border: 1px solid var(--blue);
+    border-radius: 7px;
+    padding: 7px 16px;
+    font-weight: 600;
+  }
+  .btn-primary:disabled {
+    background: var(--bg);
+    color: var(--text-dim);
+    border-color: var(--border);
+    cursor: default;
+  }
+
+  .shortcut { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--text-dim); margin-left: 5px; }
+  .segmented [data-active="true"] .shortcut, .btn-toggle[data-active="true"] .shortcut, .btn-primary .shortcut { color: inherit; opacity: 0.75; }
+
+  .validation {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--red); font-weight: 500;
+  }
+  .validation-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 17px; height: 17px; border-radius: 999px;
+    background: var(--red); color: #fff; font-size: 10px; font-weight: 700;
+  }
+
+  .work { flex: 1; display: flex; overflow: hidden; gap: 16px; padding: 16px 16px 0; }
+  .canvas-pane { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .hint { font-size: 12px; color: var(--text-dim); }
+  .canvas {
+    flex: 1;
+    position: relative;
+    background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-color: #fcfcfd;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .canvas svg { position: absolute; inset: 0; }
+
+  .rail { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; padding-bottom: 16px; overflow: auto; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+  .panel-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+  .preview-box { height: 150px; background: #fafbfc; border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+  .preview-box svg { width: 88%; }
+
+  .prop-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .prop-cell label {
+    display: block; font-family: 'Space Mono', monospace; font-size: 10px;
+    color: var(--text-dim); margin-bottom: 4px; letter-spacing: 0.04em;
+  }
+  .prop-cell input { width: 100%; font-family: 'Space Mono', monospace; text-align: left; padding: 6px 8px; }
+  .btn-danger {
+    margin-top: 12px;
+    width: 100%;
+    background: transparent;
+    color: var(--red);
+    border: 1px solid #f3c9ca;
+    border-radius: 7px;
+    padding: 6px 11px;
+    font-weight: 500;
+  }
+  .btn-danger:hover { background: #fff5f5; border-color: var(--red); }
+
+  .footer {
+    flex-shrink: 0; display: flex; align-items: center; gap: 20px;
+    padding: 12px 20px; background: var(--surface); border-top: 1px solid var(--border);
+  }
+  .meta-field { display: flex; align-items: center; gap: 8px; }
+  .meta-field label { font-size: 12px; color: var(--text-dim); }
+  .meta-field input { width: 170px; font-weight: 400; }
+  .errors { font-size: 12px; color: var(--red); margin-left: auto; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="wordmark">Trackforge</div>
+    <div class="mode-tabs">
+      <div class="mode-tab on">Design</div>
+      <div class="mode-tab">Race</div>
+      <div class="mode-tab">Browse</div>
+    </div>
+  </div>
+
+  <div class="ribbon">
+    <div class="group">
+      <select><option>Oval Speedway</option></select>
+      <input value="Oval Speedway" style="width:140px" />
+      <button class="btn-text">Save</button>
+      <select><option>Load saved…</option></select>
+      <button class="btn-text">Share</button>
+    </div>
+    <div class="divider"></div>
+    <div class="group">
+      <div class="segmented">
+        <button data-active="true">Select</button>
+        <button>Add point</button>
+        <button>Set start/finish</button>
+        <button>Checkpoints</button>
+        <button>Pan</button>
+      </div>
+      <button class="btn-toggle">Snap to grid</button>
+      <button class="btn-icon">Undo<span class="shortcut">⌘Z</span></button>
+      <button class="btn-icon" disabled>Redo<span class="shortcut">⌘Y</span></button>
+    </div>
+    <div class="group push">
+      <button class="btn-primary" disabled>Start Race</button>
+      <div class="validation"><span class="validation-badge">2</span>issues to fix</div>
+    </div>
+  </div>
+
+  <div class="work">
+    <div class="canvas-pane">
+      <div class="hint">Click a control point to select it, or drag it to move it.</div>
+      <div class="canvas">
+        <svg viewBox="0 0 600 420" preserveAspectRatio="xMidYMid meet">
+          <ellipse cx="300" cy="210" rx="220" ry="140" fill="none" stroke="#2f6fed" stroke-width="2.5"/>
+          <g fill="#fff" stroke="#2f6fed" stroke-width="2">
+            <circle cx="300" cy="70" r="6"/>
+            <circle cx="500" cy="140" r="6"/>
+            <circle cx="500" cy="280" r="6"/>
+            <circle cx="300" cy="350" r="6"/>
+            <circle cx="100" cy="280" r="6"/>
+            <circle cx="100" cy="140" r="6"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <div class="rail">
+      <div class="panel">
+        <div class="panel-title">3D preview</div>
+        <div class="preview-box">
+          <svg viewBox="0 0 200 100">
+            <path d="M0,70 Q100,20 200,70" fill="none" stroke="#2f6fed" stroke-width="14" opacity="0.18"/>
+            <path d="M0,70 Q100,20 200,70" fill="none" stroke="#2f6fed" stroke-width="1.5" opacity="0.9"/>
+          </svg>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Control point 3</div>
+        <div class="prop-grid">
+          <div class="prop-cell"><label>WIDTH</label><input value="14.0" /></div>
+          <div class="prop-cell"><label>ELEV</label><input value="0.0" /></div>
+          <div class="prop-cell"><label>BANK</label><input value="8.0" /></div>
+        </div>
+        <button class="btn-danger">Delete point<span class="shortcut">Del</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="meta-field"><label>Author</label><input placeholder="Add a name" /></div>
+    <div class="meta-field"><label>Description</label><input value="A fast, wide oval." style="width:250px" /></div>
+    <div class="errors">Start/finish line not set, and corner 4 is below the minimum radius.</div>
+  </div>
+</body>
+</html>

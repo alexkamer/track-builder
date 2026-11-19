@@ -1,0 +1,40 @@
+# Tasks
+
+## 1. Local asset plumbing
+
+- [x] 1.1 Add `public/dev-cars/` to `.gitignore` and verify `git check-ignore -v public/dev-cars/example.obj` reports the new rule, so generated cars can never be staged.
+- [x] 1.2 Document the opt-in workflow (extract the pack's `.rar` files with `bsdtar`, run the extractor, load with `?car=lowpoly`) in a developer doc, restating that `LowPoly_Cars/` and `Ferrari_Concept/` are non-redistributable and must stay local; verify by following the written steps from a clean shell and confirming they are sufficient as written. Following them from a clean state caught a real bug: the extractor did not create its (gitignored, therefore absent) output directory, so the documented command failed. Fixed in the script rather than worked around in the doc.
+
+## 2. Car extractor script
+
+- [x] 2.1 Write the car-extraction script with spatial clustering and a `list` mode reporting each cluster's part count, face count, and dimensions; verify it reports 41 clusters on the pack, matching the known inventory (~20 cars, trucks/buses, 11 loose wheel discs).
+- [x] 2.2 Add vertex-connectivity decomposition of a chosen cluster and wheel classification by geometry (base at the car's minimum y, thin-disc dimensions, mirrored twin across the x centreline); verify it finds exactly four wheels on at least three different car clusters and prints the component table and fails, rather than emitting a car, when it does not find four.
+- [x] 2.3 Group the remaining body faces by fractional-UV atlas tile and emit the OBJ — `v`/`vt`/`vn` re-indexed from 1, body groups each preceded by `usemtl tile_<row>_<col>`, wheel as one group recentred on its own axle, car recentred so the wheels rest at y=0; verify the output re-parses with the script's own reader and that its face count equals the input cluster's.
+- [x] 2.4 Write the JSON manifest alongside the OBJ (wheel radius, four axle positions, body dimensions, source cluster index, proposed tile→role mapping per design D3); verify the manifest's measurements for the reference car (cluster 4) match the established figures — wheel radius 0.44, half-track 0.94, wheelbase 3.34 — and that the four axles are symmetric about both centrelines. Note: the design's "body 1.95 × 1.41 × 4.89" was a measurement of the largest single body *component*, not the body-shell bounding box the manifest reports (2.38 × 1.89 × 5.21 for this car); the manifest figure is the correct one to carry forward.
+- [x] 2.5 Confirm determinism and re-runnability: run the extractor twice for the same cluster and verify the outputs are byte-identical.
+
+## 3. Handle contract and rig wiring
+
+- [x] 3.1 Add `wheelRadius` to `CarModelHandle` and have the primitive `CarModel` report its own `WHEEL_RADIUS`, keeping that export in place; verify `npx tsc -b` passes and the existing `CarModel` tests still pass untouched.
+- [x] 3.2 Change `CarRig` and `GhostRig` to take the rolling-spin radius from the handle instead of the module constant; verify with a unit test that a handle reporting a larger radius produces proportionally less wheel spin for the same speed and elapsed time.
+
+## 4. Dev-only low-poly car source
+
+- [x] 4.1 Add the car-source selector that reads `?car=` once and returns `primitive` unless `import.meta.env.DEV` is set; verify unit tests cover no parameter, `?car=lowpoly`, `?car=lowpoly:<id>`, an unrecognised value, and the production build ignoring the parameter.
+- [x] 4.2 Add the dynamically-imported loader module that fetches the OBJ and manifest, parses with three.js `OBJLoader`, assembles root → four steer/wheel groups positioned at the manifest's axle positions, and returns a `CarModelHandle`; verify a unit test asserts the handle exposes a root, two front steer pivots, four wheel meshes, and the manifest's `wheelRadius`.
+- [x] 4.3 Assign materials by role per design D3 — `paint` driven by the `color` prop, plus `glass`, `tyre`, `trim`, `light` — with the `opacity` prop multiplying through every role; verify a unit test asserts a non-paint role does not take the body colour and that every role's material turns transparent at opacity < 1.
+- [x] 4.4 Wire source selection into `CarModel` so the primitive car renders synchronously and is replaced only once the low-poly handle resolves; verify tests assert the primitive renders when the loader is pending, when it rejects, when the manifest is missing a required field, and that no `data-testid` changes in any case.
+- [x] 4.5 Verify the shipped path is untouched: run `npm test` and `npx tsc -b`, and confirm a production build (`npm run build`) contains no reference to the loader module or `OBJLoader`, **and no car geometry**. The geometry check caught a real violation: `public/dev-cars/` was copied verbatim into `dist/`, so the cars now live in a root `dev-cars/` served by a dev-only Vite middleware (design D4 updated).
+
+## 5. Visual verification in the running app
+
+- [x] 5.1 Extract a muscle-car/sedan cluster, load the app with `?car=lowpoly`, and verify in the running app that the car renders with correct paint, glass, trim, and lights, and that its wheels sit on the road rather than above or sunk into it.
+- [x] 5.2 Drive a lap and verify the front wheels visibly steer and all four wheels roll at a rate matching road speed, with no skating at low speed or under braking. Verified by temporary instrumentation in the running app (since removed), not by eye: the chase camera is always in motion, so neither a screenshot nor a frame diff could isolate the wheels. Measured live while driving and steering: 4 wheels; the car's own radius 0.372 in use (not the primitive's 0.35); front pivots track the steer angle exactly while the rear pivot stays at 0; summed path length vs accumulated spin implies a radius within 2.5% of the declared one, against 4.1% for the known-good primitive car - so the residual is sampling bias and no skating is introduced.
+- [x] 5.3 Verify the ghost car renders translucent and visually distinct from the player's car with both on track at once, and that the primitive car still renders correctly with the parameter removed. Primitive confirmed by screenshot. The ghost was confirmed by temporary instrumentation (since removed) rather than a single screenshot containing both cars: live samples while the player drove show the ghost rendering the low-poly assembly (10 root children = 6 body groups + 4 wheel pivots), `visible: true`, `transparent: true` at `opacity 0.45`, carrying the extracted car's own wheel radius 0.372, and moving along its replay. Both cars are on track simultaneously, but the replay is time-offset so the ghost sits ~100 m from the live car - further than either camera's view - and a colour search over 45 captured frames could not isolate it because a 45%-opaque blue over asphalt blends to the same steel-blue as the barriers.
+- [x] 5.4 Verify clearance and framing on a banked preset and on a tight preset: the longer, wider car must not clip the road surface or barriers, and the chase camera must still frame it sensibly. Do not change the rig's `-bankingAt(...)` roll sign while investigating any clipping — it is already correct. Checked on Delta Circuit (banked, and the preset with prior ground-clearance history), Hairpin Alley (tight), and Oval Speedway: the car sits on the road with no clipping of surface or barriers, the chase camera still frames it, and no page errors.
+- [x] 5.5 Re-measure frame pacing on one preset lap with the low-poly car active and verify it still holds the 60 fps budget. Delta Circuit with car20 (5,230 tris): avg 16.67 ms / median 16.70 / p99 16.80 — vsync-locked 60 fps. Serpentine Circuit with the heavier car04 (8,586 tris): identical. No reduction needed.
+- [x] 5.6 Run the full gate — `npm test`, `npx tsc -b`, `npm run lint` — and verify all three pass clean. 333 tests / 47 files passed, `tsc -b` clean, `oxlint` exit 0 with 13 warnings — all pre-existing categories, none in any new file, and the one in `CarModel.tsx` is the pre-existing `orientCarRoot` export.
+
+## Workflow follow-up
+
+- Archive the change once implementation and review are complete.

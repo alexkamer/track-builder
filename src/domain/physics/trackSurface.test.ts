@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createControlPoint, createTrackDocument } from '../track/schema'
 import { generateTrack } from '../generation/generateTrack'
-import { bankingAt, elevationAt, isOnRoadSurface } from './trackSurface'
+import { bankingAt, elevationAt, isOnRoadSurface, nearestCenterlineIndex } from './trackSurface'
 
 function wideSquareTrack() {
   return createTrackDocument({
@@ -28,12 +28,15 @@ function hillyTrack() {
 }
 
 function bankedTrack() {
+  // Elevated well clear of the ground everywhere: banking tilts each edge up/down by
+  // sin(bankingDeg) * halfWidth from this elevation (see validateGroundClearance), and a
+  // bank at or near elevation 0 would fail validation by putting one edge underground.
   return createTrackDocument({
     controlPoints: [
-      createControlPoint({ x: 0, z: 0, width: 20, bankingDeg: 0 }),
-      createControlPoint({ x: 200, z: 0, width: 20, bankingDeg: 30 }),
-      createControlPoint({ x: 200, z: 200, width: 20, bankingDeg: 0 }),
-      createControlPoint({ x: 0, z: 200, width: 20, bankingDeg: 0 }),
+      createControlPoint({ x: 0, z: 0, width: 20, elevation: 20, bankingDeg: 0 }),
+      createControlPoint({ x: 200, z: 0, width: 20, elevation: 20, bankingDeg: 30 }),
+      createControlPoint({ x: 200, z: 200, width: 20, elevation: 20, bankingDeg: 0 }),
+      createControlPoint({ x: 0, z: 200, width: 20, elevation: 20, bankingDeg: 0 }),
     ],
     startLine: { controlPointIndex: 0, headingDeg: 90 },
   })
@@ -83,6 +86,31 @@ describe('elevationAt', () => {
     const b = elevationAt({ x: 152, z: 0 }, track)
     expect(Math.abs(b - a)).toBeGreaterThan(0)
     expect(Math.abs(b - a)).toBeLessThan(1)
+  })
+
+  it('rises toward the banked-up edge and falls toward the banked-down edge, not the flat centerline height', () => {
+    // generateTrack's offsetAt tilts each edge up/down by sin(bankingRad) * halfWidth, so the
+    // two edges of a banked ring sit at different heights - elevationAt must track whichever
+    // height is actually under a laterally-offset position, not just the centerline's, or the
+    // car renders sunk into (or floating over) the road surface anywhere it isn't exactly
+    // centered.
+    const track = generateTrack(bankedTrack())
+    const centerElevation = elevationAt({ x: 200, z: 0 }, track)
+
+    const ringIndex = nearestCenterlineIndex({ x: 200, z: 0 }, track)
+    const leftEdge = track.roadMesh.positions[ringIndex * 2]
+    const rightEdge = track.roadMesh.positions[ringIndex * 2 + 1]
+    // Sanity check on the fixture itself: "positive banking tilts the left edge up" (see offsetAt).
+    expect(leftEdge.y).toBeGreaterThan(rightEdge.y)
+
+    const leftElevation = elevationAt({ x: leftEdge.x, z: leftEdge.z }, track)
+    const rightElevation = elevationAt({ x: rightEdge.x, z: rightEdge.z }, track)
+
+    expect(leftElevation).toBeGreaterThan(centerElevation)
+    expect(rightElevation).toBeLessThan(centerElevation)
+    // Tracks a substantial fraction of the mesh's own tilt, rather than staying flat at the
+    // centerline height on both sides (the pre-fix behavior).
+    expect(leftElevation - rightElevation).toBeGreaterThan((leftEdge.y - rightEdge.y) * 0.5)
   })
 })
 

@@ -67,12 +67,27 @@ export interface CarPhysicsParams {
 }
 
 export const DEFAULT_CAR_PARAMS: CarPhysicsParams = {
-  acceleration: 20,
+  // Drag is linear in speed (`speed -= speed * drag * dt`), so full-throttle speed doesn't
+  // climb toward maxSpeed at all on its own - it settles at the accel/drag equilibrium,
+  // acceleration / drag, same as a terminal velocity. At the old acceleration (20) that
+  // equilibrium was 20 / 0.6 ≈ 33.3 units/s (~74.6 mph) - *below* even the old maxSpeed (40),
+  // so the car never reached its displayed top speed at all, on any track. Raising maxSpeed
+  // alone (see below) didn't change that ceiling one bit. Acceleration now clears
+  // maxSpeed * drag (55 * 0.6 = 33), so the car actually climbs to and gets clamped at
+  // maxSpeed instead of asymptoting below it.
+  acceleration: 35,
   brakeDeceleration: 30,
   drag: 0.6,
-  maxSpeed: 40,
+  maxSpeed: 55,
   maxReverseSpeed: -12,
-  baseTurnRate: 2.2,
+  // achievableTurnRadius = maxSpeed / baseTurnRate, independent of actual speed (see that
+  // function's doc comment) - raising maxSpeed alone would *widen* the minimum corner radius
+  // validation requires, pushing generated tracks toward even wider, gentler sweeps. Raising
+  // baseTurnRate by more than maxSpeed's own increase shrinks the achievable radius instead
+  // (55/4.6 ~ 12 vs the old 40/2.2 ~ 18.2), so tracks can carry real hairpins/chicanes - the
+  // sharp, F1-style corners a bigger minimum radius was ruling out - while the car is also
+  // faster everywhere else.
+  baseTurnRate: 4.6,
   maxLateralSlip: 14,
   gripResponseRate: 6,
   offTrackDecay: 0.8,

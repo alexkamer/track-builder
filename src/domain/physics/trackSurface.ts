@@ -6,15 +6,23 @@ export interface Position2D {
   z: number
 }
 
-/** Fraction `t` along segment `a`→`b` closest to `pos` (clamped to the segment), and the squared distance to that point. */
-function projectOntoSegment(pos: Position2D, a: Vec3, b: Vec3): { t: number; distSq: number } {
+/**
+ * Fraction `t` along segment `a`→`b` closest to `pos` (clamped to the segment), the squared
+ * distance to that point, and the signed perpendicular offset (positive to the left of
+ * `a`→`b`, matching `generateTrack`'s left/right convention).
+ */
+function projectOntoSegment(pos: Position2D, a: Vec3, b: Vec3): { t: number; distSq: number; signedOffset: number } {
   const abx = b.x - a.x
   const abz = b.z - a.z
   const lenSq = abx * abx + abz * abz
+  const len = Math.sqrt(lenSq) || 1
   const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, ((pos.x - a.x) * abx + (pos.z - a.z) * abz) / lenSq))
   const dx = pos.x - (a.x + abx * t)
   const dz = pos.z - (a.z + abz * t)
-  return { t, distSq: dx * dx + dz * dz }
+  // Left-hand normal of the a→b tangent, matching computeRingFrames' (normalX, normalZ).
+  const normalX = -abz / len
+  const normalZ = abx / len
+  return { t, distSq: dx * dx + dz * dz, signedOffset: dx * normalX + dz * normalZ }
 }
 
 export function nearestCenterlineIndex(pos: Position2D, track: GeneratedTrack): number {
@@ -44,6 +52,13 @@ interface NearestCenterlinePoint {
   b: number
   /** Fraction (0..1) along the `a`→`b` segment of the closest point. */
   t: number
+  /**
+   * Signed perpendicular distance from `pos` to the centerline, positive to the left of
+   * the direction of travel (matching `generateTrack`'s `offsetAt` side convention: side
+   * `1` = left). Used to reconstruct the banked road surface's actual height under `pos`,
+   * not just its height at the centerline.
+   */
+  signedOffset: number
 }
 
 /**
@@ -66,8 +81,8 @@ function nearestPointOnCenterline(pos: Position2D, track: GeneratedTrack): Neare
   const backward = projectOntoSegment(pos, centerline[prevIndex], centerline[index])
 
   return forward.distSq <= backward.distSq
-    ? { distSq: forward.distSq, a: index, b: nextIndex, t: forward.t }
-    : { distSq: backward.distSq, a: prevIndex, b: index, t: backward.t }
+    ? { distSq: forward.distSq, a: index, b: nextIndex, t: forward.t, signedOffset: forward.signedOffset }
+    : { distSq: backward.distSq, a: prevIndex, b: index, t: backward.t, signedOffset: backward.signedOffset }
 }
 
 /**
@@ -88,12 +103,22 @@ function ringHalfWidth(track: GeneratedTrack, index: number): number {
 }
 
 /**
- * The road surface's height at the point on the centerline nearest `pos`, smoothly
- * interpolated between centerline rings so the car/ghost mesh rises and falls continuously
- * instead of stepping between ring heights as it crosses ring boundaries.
+ * The road surface's height directly under `pos`, smoothly interpolated between centerline
+ * rings so the car/ghost mesh rises and falls continuously instead of stepping between ring
+ * heights as it crosses ring boundaries.
+ *
+ * On a banked section the surface is *not* flat across the road's width - `generateTrack`'s
+ * `offsetAt` tilts each edge up/down by `sin(bankingRad) * halfWidth` - so using the
+ * centerline's own height regardless of how far `pos` actually sits from it would place the
+ * car at the wrong height anywhere it isn't exactly centered (which is most of the time,
+ * especially mid-corner): too low on the banked-up side, clipping into the mesh, or too high
+ * over the banked-down side.
  */
 export function elevationAt(pos: Position2D, track: GeneratedTrack): number {
-  return interpolateAlongCenterline(pos, track, (i) => track.centerline[i].y)
+  const { a, b, t, signedOffset } = nearestPointOnCenterline(pos, track)
+  const centerlineElevation = track.centerline[a].y + (track.centerline[b].y - track.centerline[a].y) * t
+  const bankingRad = track.bankingRad[a] + (track.bankingRad[b] - track.bankingRad[a]) * t
+  return centerlineElevation + Math.sin(bankingRad) * signedOffset
 }
 
 /**

@@ -161,12 +161,16 @@ describe('stepCarPhysics off-track penalty', () => {
     // Regression guard: offTrackDecay must stay low enough that full throttle off-track still
     // climbs well above a crawl. A too-harsh value combined with turn rate scaling with speed
     // creates a self-reinforcing trap (slower -> less turn authority -> can't steer back onto
-    // a curving road -> stays off-track) that reads as "the car never goes fast".
+    // a curving road -> stays off-track) that reads as "the car never goes fast". The
+    // threshold is an absolute speed, not a fraction of maxSpeed: the off-track equilibrium
+    // this reaches is set by acceleration/drag/offTrackDecay, not by maxSpeed, so tying it to
+    // maxSpeed would make this guard fail or pass vacuously any time maxSpeed is tuned on its
+    // own.
     let state = createInitialCarState(0, 0, 0)
     for (let i = 0; i < 300; i++) {
       state = stepCarPhysics(state, { throttle: 1, brake: 0, steer: 0 }, FIXED_DT, undefined, true)
     }
-    expect(state.speed).toBeGreaterThan(DEFAULT_CAR_PARAMS.maxSpeed * 0.3)
+    expect(state.speed).toBeGreaterThan(10)
   })
 })
 

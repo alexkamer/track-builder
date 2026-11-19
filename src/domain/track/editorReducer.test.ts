@@ -145,6 +145,24 @@ describe('editorReducer', () => {
     expect(next.checkpoints).toEqual([])
   })
 
+  it('defaults the start line heading to the curve tangent, not the previously stored heading, when none is given', () => {
+    const doc = createTrackDocument({
+      controlPoints: [
+        createControlPoint({ x: 0, z: 0 }),
+        createControlPoint({ x: 100, z: 0 }),
+        createControlPoint({ x: 100, z: 100 }),
+      ],
+      // Deliberately a heading that has nothing to do with control point 1's actual
+      // direction of travel, so this test fails if the fallback is "keep the old value"
+      // instead of "compute the new point's tangent".
+      startLine: { controlPointIndex: 0, headingDeg: 999 },
+    })
+    const next = editorReducer(doc, { type: 'SET_START_LINE', controlPointIndex: 1 })
+    // Travel at control point 1 goes from (0,0) toward (100,100): tangent (100,100) -> 45deg.
+    expect(next.startLine.controlPointIndex).toBe(1)
+    expect(next.startLine.headingDeg).toBeCloseTo(45, 5)
+  })
+
   it('adds checkpoints in loop order relative to the start line', () => {
     const doc = createTrackDocument({
       controlPoints: [
