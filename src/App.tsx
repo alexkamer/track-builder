@@ -184,6 +184,9 @@ function App() {
             ))}
           </ul>
         )}
+        <a className="asset-credits-link" href="/assets/CREDITS.md" target="_blank" rel="noreferrer">
+          Scene asset credits
+        </a>
       </div>
     </div>
   )

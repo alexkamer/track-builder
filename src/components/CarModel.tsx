@@ -97,7 +97,7 @@ export const CarModel = forwardRef<CarModelHandle, CarModelProps>(function CarMo
       {WHEEL_POSITIONS.map((position, i) => {
         const wheel = (
           <group rotation={[0, 0, Math.PI / 2]}>
-            <mesh ref={(m) => void (wheelMeshRefs.current[i] = m!)}>
+            <mesh ref={(m) => void (wheelMeshRefs.current[i] = m!)} castShadow>
               <cylinderGeometry args={[WHEEL_RADIUS, WHEEL_RADIUS, 0.3, 14]} />
               {wheelMaterial}
             </mesh>

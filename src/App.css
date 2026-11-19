@@ -719,6 +719,18 @@
   font-size: var(--text-sm);
 }
 
+.asset-credits-link {
+  align-self: flex-start;
+  color: var(--color-text-muted, #8b93a1);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.asset-credits-link:hover {
+  color: var(--color-accent, #f5a524);
+  text-decoration: underline;
+}
+
 .camera-toggle,
 .restart-button {
   position: absolute;

@@ -2,7 +2,7 @@ import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { boundingRadiusOf, centroidOf, LiveTrackPreview3D } from './LiveTrackPreview3D'
 import { createControlPoint, createTrackDocument } from '../domain/track/schema'
-import { generateRoadMeshPreview } from '../domain/generation/generateTrack'
+import { generateScenePreview } from '../domain/generation/generateTrack'
 
 function trackAt(offset: number) {
   return createTrackDocument({
@@ -18,10 +18,11 @@ function trackAt(offset: number) {
 describe('LiveTrackPreview3D camera framing', () => {
   it('computes a centroid and bounding radius that cover the full track when a far-off-origin track is loaded', () => {
     const farTrack = trackAt(5000)
-    const roadMesh = generateRoadMeshPreview(farTrack)
-    expect(roadMesh).not.toBeNull()
+    const surfaces = generateScenePreview(farTrack)
+    expect(surfaces).not.toBeNull()
+    const roadMesh = surfaces!.roadMesh
 
-    const center = centroidOf(roadMesh!)
+    const center = centroidOf(roadMesh)
     // The loaded track's points span roughly x,z in [5000, 5100]; the centroid used to frame
     // the camera (CameraFraming's useEffect runs on every roadMesh change, including a load)
     // must track the newly loaded track's bounds, not the previous track's or the origin.
@@ -30,9 +31,9 @@ describe('LiveTrackPreview3D camera framing', () => {
     expect(center.z).toBeGreaterThan(4900)
     expect(center.z).toBeLessThan(5200)
 
-    const radius = boundingRadiusOf(roadMesh!, center)
+    const radius = boundingRadiusOf(roadMesh, center)
     const maxDistance = Math.max(
-      ...roadMesh!.positions.map((p) => Math.hypot(p.x - center.x, p.z - center.z)),
+      ...roadMesh.positions.map((p) => Math.hypot(p.x - center.x, p.z - center.z)),
     )
     expect(radius).toBeCloseTo(maxDistance, 5)
   })

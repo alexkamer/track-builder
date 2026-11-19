@@ -1,4 +1,4 @@
-import type { GeneratedTrack } from '../generation/generateTrack'
+import { ringVertex, type GeneratedTrack } from '../generation/generateTrack'
 import type { CarState } from './carPhysics'
 import { nearestCenterlineIndex } from './trackSurface'
 
@@ -42,8 +42,10 @@ function normalizeAngle(angleRad: number): number {
 export function resolveBarrierCollision(state: CarState, track: GeneratedTrack): CarState {
   const index = nearestCenterlineIndex(state, track)
   const center = track.centerline[index]
-  const leftBase = track.barrierLeft.positions[index * 2]
-  const rightBase = track.barrierRight.positions[index * 2]
+  // Profile point 0 is each barrier's innermost face - the wall the car actually hits. The
+  // armco profile's mid-height ridge folds outward from here, and must not widen the boundary.
+  const leftBase = ringVertex(track.barrierLeft, index)
+  const rightBase = ringVertex(track.barrierRight, index)
 
   const spanX = leftBase.x - rightBase.x
   const spanZ = leftBase.z - rightBase.z

@@ -1,9 +1,14 @@
 import { Canvas, useThree } from '@react-three/fiber'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
+import * as THREE from 'three'
 import type { TrackDocument } from '../domain/track/schema'
-import type { RibbonMesh } from '../domain/generation/generateTrack'
-import { generateRoadMeshPreview } from '../domain/generation/generateTrack'
-import { RoadMesh3D } from './RoadMesh3D'
+import type { RibbonMesh, TrackSurfaces } from '../domain/generation/generateTrack'
+import { generateScenePreview } from '../domain/generation/generateTrack'
+import { SceneEnvironment, overviewFogDensity } from './SceneEnvironment'
+import { SceneLighting } from './SceneLighting'
+import { SceneAssetsProvider } from './SceneAssets'
+import { TrackScenery } from './TrackScenery'
+import { TrackSurfaceMeshes } from './TrackSurfaces3D'
 
 interface LiveTrackPreview3DProps {
   doc: TrackDocument
@@ -71,11 +76,36 @@ function CameraFraming({ roadMesh }: { roadMesh: RibbonMesh }) {
 }
 
 /**
+ * The preview's scene contents, sharing the race view's sun, sky, and fog so the preview
+ * previews what the player will actually drive. Its shadow frustum and map are sized to this
+ * panel rather than to a chase camera: an overview camera needs the frustum to span the whole
+ * track, and at this panel size a smaller map is indistinguishable while editing stays snappy.
+ */
+function PreviewScene({ surfaces }: { surfaces: TrackSurfaces }) {
+  const { roadMesh } = surfaces
+  const { center, radius } = useMemo(() => {
+    const center = centroidOf(roadMesh)
+    return { center, radius: boundingRadiusOf(roadMesh, center) }
+  }, [roadMesh])
+
+  return (
+    <SceneAssetsProvider>
+      <SceneEnvironment fogDensity={overviewFogDensity(radius)} />
+      <SceneLighting center={center} shadowExtent={radius * 1.2} shadowMapSize={1024} />
+      <TrackSurfaceMeshes surfaces={surfaces} />
+      <TrackScenery centerline={surfaces.centerline} groundY={surfaces.groundY} />
+      <CameraFraming roadMesh={roadMesh} />
+    </SceneAssetsProvider>
+  )
+}
+
+/**
  * Shows the 3D shape of the track as it's being edited, without requiring a
  * "generate" action or full validation (start line, etc.) first.
  */
 export function LiveTrackPreview3D({ doc, width = 420, height = 480 }: LiveTrackPreview3DProps) {
-  const roadMesh = generateRoadMeshPreview(doc)
+  const surfaces = generateScenePreview(doc)
+  const roadMesh = surfaces?.roadMesh ?? null
 
   return (
     <div className="panel" data-testid="live-3d-preview">
@@ -88,12 +118,13 @@ export function LiveTrackPreview3D({ doc, width = 420, height = 480 }: LiveTrack
       </div>
       <div className="viewfinder">
         <div className="preview-surface" style={{ width, height }}>
-          {roadMesh ? (
-            <Canvas camera={{ fov: 50 }}>
-              <ambientLight intensity={1.2} />
-              <directionalLight position={[50, 100, 50]} intensity={2} />
-              <RoadMesh3D roadMesh={roadMesh} />
-              <CameraFraming roadMesh={roadMesh} />
+          {surfaces ? (
+            <Canvas
+              camera={{ fov: 50 }}
+              shadows="soft"
+              gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.68 }}
+            >
+              <PreviewScene surfaces={surfaces} />
             </Canvas>
           ) : (
             <p>Add at least 3 control points to see the 3D preview.</p>

@@ -24,3 +24,9 @@ dist-ssr
 *.sw?
 .scratch/
 data/
+
+# Raw 3D source assets (.blend/.fbx/.obj/.stl + archives). These are hundreds of MB to over a
+# gigabyte each and git keeps them forever, so they stay local. Only the small optimized
+# runtime models exported from them belong in the repo, under public/assets/.
+LowPoly_Cars/
+Ferrari_Concept/
